@@ -108,10 +108,10 @@ def handler(event, context):
         messages = [{"role": "user", "content": prompt}]
 
     bedrock_body = {
-#         "anthropic_version": "bedrock-2023-05-31",
-#         "max_tokens": int(payload.get("max_tokens", 256)),
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": int(payload.get("max_tokens", 256)),
         "temperature": float(payload.get("temperature", 0)),
-        "prompt": prompt
+        "messages": prompt
     }
 
     try:

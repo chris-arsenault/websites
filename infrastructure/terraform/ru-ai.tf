@@ -2,7 +2,7 @@ module "bedrock" {
   source = "./modules/bedrock-api"
 
   project_name     = "ru-ai"
-  bedrock_model_id = "meta.llama3-70b-instruct-v1:0"
+  bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"
   aws_region       = "us-east-1"
 
   tags = {
