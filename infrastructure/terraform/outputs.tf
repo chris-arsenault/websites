@@ -9,7 +9,7 @@ output "all_sites" {
       cloudfront_domain = module.ru-ai.cloudfront_domain_name
       site_name         = module.ru-ai.site_name
       domain_name       = module.ru-ai.domain_name
-      local_path        = "sites/ru-ai"
+      local_path        = "sites/ru-ai.net"
     }
   }
 }
