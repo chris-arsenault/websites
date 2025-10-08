@@ -1,157 +1,157 @@
-name: Update Site Content
-
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'sites/**'
-  workflow_dispatch:
-    inputs:
-      site:
-        description: 'Site to update (leave empty for auto-detect)'
-        required: false
-        type: string
-
-env:
-  AWS_REGION: 'us-east-1'
-  TF_VERSION: '1.6.0'
-
-jobs:
-  detect-changes:
-    name: Detect Changed Sites
-    runs-on: ubuntu-latest
-    outputs:
-      changed_sites: ${{ steps.detect.outputs.changed_sites }}
-      has_changes: ${{ steps.detect.outputs.has_changes }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Detect changed sites
-        id: detect
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.site }}" ]; then
-            # Manual trigger with specific site
-            SITES="${{ github.event.inputs.site }}"
-            echo "🎯 Manually triggered for site: $SITES"
-          else
-            # Auto-detect from git changes
-            CHANGED=$(git diff --name-only HEAD^ HEAD | grep "^sites/" | cut -d'/' -f2 | sort -u | tr '\n' ' ')
-            SITES="${CHANGED}"
-            echo "🔍 Auto-detected changed sites: $SITES"
-          fi
-          
-          if [ -z "$SITES" ]; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No site changes detected"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "changed_sites=$SITES" >> $GITHUB_OUTPUT
-            echo "Sites to update: $SITES"
-          fi
-
-  update-content:
-    name: Update Site Content
-    needs: detect-changes
-    if: needs.detect-changes.outputs.has_changes == 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-          terraform_wrapper: false
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get Terraform outputs
-        run: |
-          cd infrastructure/terraform
-          terraform init \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
-            -backend-config="encrypt=true"
-          terraform output -json all_sites > sites-config.json
-
-      - name: Sync and invalidate
-        run: |
-          cd infrastructure/terraform
-          SITES_JSON=$(cat sites-config.json)
-          CHANGED_SITES="${{ needs.detect-changes.outputs.changed_sites }}"
-          
-          echo "🚀 Updating changed sites..."
-          
-          for site in $CHANGED_SITES; do
-            echo "================================================"
-            echo "📦 Updating site: $site"
-            echo "================================================"
-          
-            # Check if site exists in Terraform outputs
-            if ! echo "$SITES_JSON" | jq -e ".[\"$site\"]" > /dev/null; then
-              echo "⚠️  Warning: Site '$site' not found in Terraform outputs, skipping..."
-              continue
-            fi
-          
-            # Extract site details
-            S3_BUCKET=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].s3_bucket")
-            CLOUDFRONT_ID=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].cloudfront_id")
-            LOCAL_PATH=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].local_path")
-            HOSTNAME=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].hostname")
-          
-            echo "  S3 Bucket: $S3_BUCKET"
-            echo "  CloudFront ID: $CLOUDFRONT_ID"
-            echo "  Local Path: $LOCAL_PATH"
-            echo "  Hostname: $HOSTNAME"
-          
-            # Check if local path exists
-            if [ ! -d "$LOCAL_PATH" ]; then
-              echo "  ⚠️  Warning: Local path $LOCAL_PATH does not exist, skipping..."
-              continue
-            fi
-          
-            # Sync files
-            echo "  📤 Syncing files to S3..."
-            aws s3 sync "$LOCAL_PATH/" "s3://$S3_BUCKET/" \
-              --delete \
-              --cache-control "public, max-age=3600"
-          
-            echo "  ✅ Files synced successfully"
-          
-            # Create invalidation
-            echo "  🔄 Invalidating CloudFront cache..."
-            INVALIDATION_ID=$(aws cloudfront create-invalidation \
-              --distribution-id "$CLOUDFRONT_ID" \
-              --paths "/*" \
-              --query 'Invalidation.Id' \
-              --output text)
-          
-            echo "  ✅ Invalidation created: $INVALIDATION_ID"
-          
-            # Wait for invalidation
-            echo "  ⏳ Waiting for invalidation to complete..."
-            aws cloudfront wait invalidation-completed \
-              --distribution-id "$CLOUDFRONT_ID" \
-              --id "$INVALIDATION_ID"
-          
-            echo "  ✅ Site updated successfully!"
-            echo "  🌐 URL: https://$HOSTNAME"
-            echo ""
-          done
-          
-          echo "================================================"
-          echo "🎉 All site updates completed!"
-          echo "================================================"
+#name: Update Site Content
+#
+#on:
+#  push:
+#    branches:
+#      - main
+#    paths:
+#      - 'sites/**'
+#  workflow_dispatch:
+#    inputs:
+#      site:
+#        description: 'Site to update (leave empty for auto-detect)'
+#        required: false
+#        type: string
+#
+#env:
+#  AWS_REGION: 'us-east-1'
+#  TF_VERSION: '1.6.0'
+#
+#jobs:
+#  detect-changes:
+#    name: Detect Changed Sites
+#    runs-on: ubuntu-latest
+#    outputs:
+#      changed_sites: ${{ steps.detect.outputs.changed_sites }}
+#      has_changes: ${{ steps.detect.outputs.has_changes }}
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 2
+#
+#      - name: Detect changed sites
+#        id: detect
+#        run: |
+#          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.site }}" ]; then
+#            # Manual trigger with specific site
+#            SITES="${{ github.event.inputs.site }}"
+#            echo "🎯 Manually triggered for site: $SITES"
+#          else
+#            # Auto-detect from git changes
+#            CHANGED=$(git diff --name-only HEAD^ HEAD | grep "^sites/" | cut -d'/' -f2 | sort -u | tr '\n' ' ')
+#            SITES="${CHANGED}"
+#            echo "🔍 Auto-detected changed sites: $SITES"
+#          fi
+#
+#          if [ -z "$SITES" ]; then
+#            echo "has_changes=false" >> $GITHUB_OUTPUT
+#            echo "No site changes detected"
+#          else
+#            echo "has_changes=true" >> $GITHUB_OUTPUT
+#            echo "changed_sites=$SITES" >> $GITHUB_OUTPUT
+#            echo "Sites to update: $SITES"
+#          fi
+#
+#  update-content:
+#    name: Update Site Content
+#    needs: detect-changes
+#    if: needs.detect-changes.outputs.has_changes == 'true'
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Setup Terraform
+#        uses: hashicorp/setup-terraform@v3
+#        with:
+#          terraform_version: ${{ env.TF_VERSION }}
+#          terraform_wrapper: false
+#
+#      - name: Configure AWS credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: ${{ env.AWS_REGION }}
+#
+#      - name: Get Terraform outputs
+#        run: |
+#          cd infrastructure/terraform
+#          terraform init \
+#            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+#            -backend-config="region=${{ env.AWS_REGION }}" \
+#            -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
+#            -backend-config="encrypt=true"
+#          terraform output -json all_sites > sites-config.json
+#
+#      - name: Sync and invalidate
+#        run: |
+#          cd infrastructure/terraform
+#          SITES_JSON=$(cat sites-config.json)
+#          CHANGED_SITES="${{ needs.detect-changes.outputs.changed_sites }}"
+#
+#          echo "🚀 Updating changed sites..."
+#
+#          for site in $CHANGED_SITES; do
+#            echo "================================================"
+#            echo "📦 Updating site: $site"
+#            echo "================================================"
+#
+#            # Check if site exists in Terraform outputs
+#            if ! echo "$SITES_JSON" | jq -e ".[\"$site\"]" > /dev/null; then
+#              echo "⚠️  Warning: Site '$site' not found in Terraform outputs, skipping..."
+#              continue
+#            fi
+#
+#            # Extract site details
+#            S3_BUCKET=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].s3_bucket")
+#            CLOUDFRONT_ID=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].cloudfront_id")
+#            LOCAL_PATH=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].local_path")
+#            HOSTNAME=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].hostname")
+#
+#            echo "  S3 Bucket: $S3_BUCKET"
+#            echo "  CloudFront ID: $CLOUDFRONT_ID"
+#            echo "  Local Path: $LOCAL_PATH"
+#            echo "  Hostname: $HOSTNAME"
+#
+#            # Check if local path exists
+#            if [ ! -d "$LOCAL_PATH" ]; then
+#              echo "  ⚠️  Warning: Local path $LOCAL_PATH does not exist, skipping..."
+#              continue
+#            fi
+#
+#            # Sync files
+#            echo "  📤 Syncing files to S3..."
+#            aws s3 sync "$LOCAL_PATH/" "s3://$S3_BUCKET/" \
+#              --delete \
+#              --cache-control "public, max-age=3600"
+#
+#            echo "  ✅ Files synced successfully"
+#
+#            # Create invalidation
+#            echo "  🔄 Invalidating CloudFront cache..."
+#            INVALIDATION_ID=$(aws cloudfront create-invalidation \
+#              --distribution-id "$CLOUDFRONT_ID" \
+#              --paths "/*" \
+#              --query 'Invalidation.Id' \
+#              --output text)
+#
+#            echo "  ✅ Invalidation created: $INVALIDATION_ID"
+#
+#            # Wait for invalidation
+#            echo "  ⏳ Waiting for invalidation to complete..."
+#            aws cloudfront wait invalidation-completed \
+#              --distribution-id "$CLOUDFRONT_ID" \
+#              --id "$INVALIDATION_ID"
+#
+#            echo "  ✅ Site updated successfully!"
+#            echo "  🌐 URL: https://$HOSTNAME"
+#            echo ""
+#          done
+#
+#          echo "================================================"
+#          echo "🎉 All site updates completed!"
+#          echo "================================================"

@@ -13,3 +13,7 @@ output "all_sites" {
     }
   }
 }
+
+output "cloudfront_distribution_id" {
+  value = module.ru-ai.cloudfront_distribution_id
+}

@@ -241,7 +241,7 @@ jobs:
           cd infrastructure/terraform
           terraform apply -auto-approve tfplan
           
-          terraform output -json | jq 'keys'
+          terraform output -json
           
           # Get all sites information from Terraform outputs
           SITES_JSON=$(terraform output -json all_sites)
