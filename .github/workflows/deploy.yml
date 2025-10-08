@@ -240,12 +240,6 @@ jobs:
           cd infrastructure/terraform
           
           terraform apply -auto-approve tfplan
-          echo "RAW"
-          TF_LOG=debug terraform output -raw all_sites
-          echo "RAW"
-          terraform output -raw cloudfront_distribution_id 
-          echo "JSON"
-          terraform output -json
           
           # Get all sites information from Terraform outputs
           SITES_JSON=$(terraform output -json all_sites)

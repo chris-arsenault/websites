@@ -416,11 +416,31 @@
     };
 
     async function getBedrockCredentials() {
-        const credentials = fromCognitoIdentityPool({
-            clientConfig: { region: CONFIG.region },
-            identityPoolId: CONFIG.identityPoolId
+        const cognitoClient = new CognitoIdentityClient({
+            region: CONFIG.region
         });
-        return credentials;
+
+        // Step 1: Get Identity ID
+        const getIdResponse = await cognitoClient.send(
+            new GetIdCommand({
+                IdentityPoolId: CONFIG.identityPoolId
+            })
+        );
+
+        // Step 2: Get credentials for that identity
+        const getCredsResponse = await cognitoClient.send(
+            new GetCredentialsForIdentityCommand({
+                IdentityId: getIdResponse.IdentityId
+            })
+        );
+
+        // Return credentials in format Bedrock client expects
+        return {
+            accessKeyId: getCredsResponse.Credentials.AccessKeyId,
+            secretAccessKey: getCredsResponse.Credentials.SecretKey,
+            sessionToken: getCredsResponse.Credentials.SessionToken,
+            expiration: getCredsResponse.Credentials.Expiration
+        };
     }
 
     function buildPrompt(challenges, answers) {
