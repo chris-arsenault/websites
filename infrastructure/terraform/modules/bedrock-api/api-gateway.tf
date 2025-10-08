@@ -1,5 +1,5 @@
 resource "aws_apigatewayv2_api" "http" {
-  name          = "bedrock-proxy-http"
+  name          = "${var.project_name}-bedrock-proxy-http"
   protocol_type = "HTTP"
 
   cors_configuration {

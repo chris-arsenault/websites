@@ -1,75 +1,75 @@
-#---
-#
-## .github/workflows/destroy.yml
-#
-#name: Destroy Infrastructure
-#
-#on:
-#  workflow_dispatch:
-#    inputs:
-#      confirm:
-#        description: 'Type "destroy" to confirm'
-#        required: true
-#        default: ''
-#
-#env:
-#  TF_VERSION: '1.6.0'
-#  AWS_REGION: 'us-east-1'
-#
-#jobs:
-#  terraform-destroy:
-#    name: Terraform Destroy
-#    runs-on: ubuntu-latest
-#    environment: production
-#    if: github.event.inputs.confirm == 'destroy'
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#
-#      - name: Setup Terraform
-#        uses: hashicorp/setup-terraform@v3
-#        with:
-#          terraform_version: ${{ env.TF_VERSION }}
-#          terraform_wrapper: false
-#
-#      - name: Configure AWS credentials
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: ${{ env.AWS_REGION }}
-#
-#      - name: Terraform Init
-#        run: terraform init
-#
-#      - name: Get site information
-#        run: |
-#          echo "📊 Getting current infrastructure..."
-#          terraform output -json all_sites > sites-to-destroy.json || echo "{}" > sites-to-destroy.json
-#          cat sites-to-destroy.json
-#
-#      - name: Empty S3 Buckets
-#        run: |
-#          if [ -f sites-to-destroy.json ] && [ -s sites-to-destroy.json ]; then
-#            SITES_JSON=$(cat sites-to-destroy.json)
-#            SITE_NAMES=$(echo "$SITES_JSON" | jq -r 'keys[]' 2>/dev/null || echo "")
-#
-#            if [ -n "$SITE_NAMES" ]; then
-#              for site in $SITE_NAMES; do
-#                BUCKET=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].s3_bucket")
-#                echo "🗑️  Emptying bucket: $BUCKET"
-#                aws s3 rm "s3://$BUCKET" --recursive || true
-#              done
-#            else
-#              echo "No sites found in Terraform output, skipping bucket cleanup"
-#            fi
-#          else
-#            echo "No sites configuration found"
-#          fi
-#
-#      - name: Terraform Destroy
-#        run: terraform destroy -auto-approve
-#
-#      - name: Notify
-#        run: echo "🗑️ Infrastructure destroyed successfully"
+---
+
+# .github/workflows/destroy.yml
+
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm'
+        required: true
+        default: ''
+
+env:
+  TF_VERSION: '1.6.0'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  terraform-destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event.inputs.confirm == 'destroy'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Get site information
+        run: |
+          echo "📊 Getting current infrastructure..."
+          terraform output -json all_sites > sites-to-destroy.json || echo "{}" > sites-to-destroy.json
+          cat sites-to-destroy.json
+
+      - name: Empty S3 Buckets
+        run: |
+          if [ -f sites-to-destroy.json ] && [ -s sites-to-destroy.json ]; then
+            SITES_JSON=$(cat sites-to-destroy.json)
+            SITE_NAMES=$(echo "$SITES_JSON" | jq -r 'keys[]' 2>/dev/null || echo "")
+
+            if [ -n "$SITE_NAMES" ]; then
+              for site in $SITE_NAMES; do
+                BUCKET=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].s3_bucket")
+                echo "🗑️  Emptying bucket: $BUCKET"
+                aws s3 rm "s3://$BUCKET" --recursive || true
+              done
+            else
+              echo "No sites found in Terraform output, skipping bucket cleanup"
+            fi
+          else
+            echo "No sites configuration found"
+          fi
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+
+      - name: Notify
+        run: echo "🗑️ Infrastructure destroyed successfully"

@@ -5,7 +5,7 @@ data "archive_file" "lambda_zip" {
 }
 
 resource "aws_lambda_function" "bedrock_proxy" {
-  function_name = "bedrock-proxy"
+  function_name = "${var.project_name}-bedrock-proxy"
   role          = aws_iam_role.lambda_role.arn
   filename      = data.archive_file.lambda_zip.output_path
   handler       = "lambda_function.handler"
@@ -17,7 +17,7 @@ resource "aws_lambda_function" "bedrock_proxy" {
     variables = {
       TABLE_NAME            = aws_dynamodb_table.rate_limits.name
       RATE_LIMIT_PER_MINUTE = tostring(var.rate_limit_per_minute)
-      MODEL_ID              = var.bedrock_model_id
+      MODEL_ID              = aws_bedrock_inference_profile.llama_profile.arn
       BEDROCK_REGION        = var.aws_region
     }
   }

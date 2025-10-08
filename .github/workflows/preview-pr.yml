@@ -1,106 +1,106 @@
-#name: Preview PR Changes
-#
-#on:
-#  pull_request:
-#    branches:
-#      - main
-#    paths:
-#      - 'sites/**'
-#      - 'modules/**'
-#      - '*.tf'
-#
-#env:
-#  AWS_REGION: 'us-east-1'
-#
-#jobs:
-#  preview-changes:
-#    name: Preview Site Changes
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#
-#      - name: Detect changed sites
-#        id: changes
-#        run: |
-#          # Get changed files
-#          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
-#
-#          echo "📝 Changed files:"
-#          echo "$CHANGED_FILES"
-#
-#          # Detect changed sites
-#          CHANGED_SITES=$(echo "$CHANGED_FILES" | grep "^sites/" | cut -d'/' -f2 | sort -u | tr '\n' ' ')
-#
-#          # Detect Terraform changes
-#          TF_CHANGED=$(echo "$CHANGED_FILES" | grep -E '\.(tf|tfvars) | wc -l)
-#
-#          echo "changed_sites=$CHANGED_SITES" >> $GITHUB_OUTPUT
-#          echo "tf_changed=$TF_CHANGED" >> $GITHUB_OUTPUT
-#
-#          echo ""
-#          echo "🔍 Detection Results:"
-#          echo "  Changed sites: $CHANGED_SITES"
-#          echo "  Terraform changed: $TF_CHANGED files"
-#
-#      - name: Comment on PR
-#        uses: actions/github-script@v7
-#        with:
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
-#          script: |
-#            const changedSites = '${{ steps.changes.outputs.changed_sites }}'.trim();
-#            const tfChanged = '${{ steps.changes.outputs.tf_changed }}';
-#
-#            let message = '## 🔍 Deployment Preview\n\n';
-#
-#            if (changedSites) {
-#              const sites = changedSites.split(' ').filter(s => s);
-#              message += '### 📦 Sites to be updated:\n';
-#              sites.forEach(site => {
-#                message += `- \`${site}\`\n`;
-#              });
-#              message += '\n';
-#            } else {
-#              message += '### ℹ️ No site content changes detected\n\n';
-#            }
-#
-#            if (tfChanged > 0) {
-#              message += `### ⚙️ Infrastructure changes detected\n`;
-#              message += `${tfChanged} Terraform file(s) modified. Full Terraform plan will run on merge.\n\n`;
-#            }
-#
-#            message += '---\n';
-#            message += '*This PR will trigger a deployment when merged to main.*';
-#
-#            // Check if we already commented
-#            const comments = await github.rest.issues.listComments({
-#              owner: context.repo.owner,
-#              repo: context.repo.repo,
-#              issue_number: context.issue.number,
-#            });
-#
-#            const existingComment = comments.data.find(comment =>
-#              comment.user.type === 'Bot' &&
-#              comment.body.includes('Deployment Preview')
-#            );
-#
-#            if (existingComment) {
-#              // Update existing comment
-#              await github.rest.issues.updateComment({
-#                owner: context.repo.owner,
-#                repo: context.repo.repo,
-#                comment_id: existingComment.id,
-#                body: message
-#              });
-#            } else {
-#              // Create new comment
-#              await github.rest.issues.createComment({
-#                owner: context.repo.owner,
-#                repo: context.repo.repo,
-#                issue_number: context.issue.number,
-#                body: message
-#              });
-#            }
+name: Preview PR Changes
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'sites/**'
+      - 'modules/**'
+      - '*.tf'
+
+env:
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  preview-changes:
+    name: Preview Site Changes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed sites
+        id: changes
+        run: |
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+
+          echo "📝 Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Detect changed sites
+          CHANGED_SITES=$(echo "$CHANGED_FILES" | grep "^sites/" | cut -d'/' -f2 | sort -u | tr '\n' ' ')
+
+          # Detect Terraform changes
+          TF_CHANGED=$(echo "$CHANGED_FILES" | grep -E '\.(tf|tfvars) | wc -l)
+
+          echo "changed_sites=$CHANGED_SITES" >> $GITHUB_OUTPUT
+          echo "tf_changed=$TF_CHANGED" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "🔍 Detection Results:"
+          echo "  Changed sites: $CHANGED_SITES"
+          echo "  Terraform changed: $TF_CHANGED files"
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const changedSites = '${{ steps.changes.outputs.changed_sites }}'.trim();
+            const tfChanged = '${{ steps.changes.outputs.tf_changed }}';
+
+            let message = '## 🔍 Deployment Preview\n\n';
+
+            if (changedSites) {
+              const sites = changedSites.split(' ').filter(s => s);
+              message += '### 📦 Sites to be updated:\n';
+              sites.forEach(site => {
+                message += `- \`${site}\`\n`;
+              });
+              message += '\n';
+            } else {
+              message += '### ℹ️ No site content changes detected\n\n';
+            }
+
+            if (tfChanged > 0) {
+              message += `### ⚙️ Infrastructure changes detected\n`;
+              message += `${tfChanged} Terraform file(s) modified. Full Terraform plan will run on merge.\n\n`;
+            }
+
+            message += '---\n';
+            message += '*This PR will trigger a deployment when merged to main.*';
+
+            // Check if we already commented
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Deployment Preview')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: message
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+            }

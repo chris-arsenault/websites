@@ -1,78 +1,77 @@
-#name: Validate Terraform
-#
-#on:
-#  pull_request:
-#    paths:
-#      - '**.tf'
-#      - '**.tfvars'
-#      - 'modules/**'
-#  push:
-#    branches:
-#      - main
-#    paths:
-#      - '**.tf'
-#      - '**.tfvars'
-#      - 'modules/**'
-#
-#env:
-#  TF_VERSION: '1.6.0'
-#  AWS_REGION: 'us-east-1'
-#  TF_STATE_BUCKET: 'ahara-static-websites-tf-state'
-#  TF_STATE_DYNAMODB_TABLE: 'ahara-static-websites-tf-lock'
-#
-#jobs:
-#  validate:
-#    name: Validate Terraform Code
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v4
-#
-#      - name: Setup Terraform
-#        uses: hashicorp/setup-terraform@v3
-#        with:
-#          terraform_version: ${{ env.TF_VERSION }}
-#
-#      - name: Terraform Format Check
-#        id: fmt
-#        run: terraform fmt -check -recursive
-#        continue-on-error: true
-#
-#      - name: Terraform Init
-#        run: |
-#          cd infrasturcture/terraform
-#
-#          terraform init \
-#          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-#          -backend-config="key=static-websites/terraform.tfstate" \
-#          -backend-config="region=${{ env.AWS_REGION }}" \
-#          -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
-#          -backend-config="encrypt=true"
-#
-#      - name: Terraform Validate
-#        id: validate
-#        run: terraform validate -no-color
-#
-#      - name: Comment Format Issues
-#        if: steps.fmt.outcome == 'failure' && github.event_name == 'pull_request'
-#        uses: actions/github-script@v7
-#        with:
-#          github-token: ${{ secrets.GITHUB_TOKEN }}
-#          script: |
-#            const output = `#### Terraform Format Check ❌
-#
-#            Some files are not properly formatted. Run \`terraform fmt -recursive\` to fix.
-#
-#            *Workflow: \`${{ github.workflow }}\`*`;
-#
-#            github.rest.issues.createComment({
-#              issue_number: context.issue.number,
-#              owner: context.repo.owner,
-#              repo: context.repo.repo,
-#              body: output
-#            });
-#
-#      - name: Fail on format issues
-#        if: steps.fmt.outcome == 'failure'
-#        run: exit 1
+name: Validate Terraform
+
+on:
+  pull_request:
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - 'modules/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '**.tf'
+      - '**.tfvars'
+      - 'modules/**'
+
+env:
+  TF_VERSION: '1.6.0'
+  AWS_REGION: 'us-east-1'
+  TF_STATE_BUCKET: 'ahara-static-websites-tf-state'
+  TF_STATE_DYNAMODB_TABLE: 'ahara-static-websites-tf-lock'
+
+jobs:
+  validate:
+    name: Validate Terraform Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Init
+        run: |
+          cd infrasturcture/terraform
+
+          terraform init \
+          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+          -backend-config="region=${{ env.AWS_REGION }}" \
+          -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
+          -backend-config="encrypt=true"
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Comment Format Issues
+        if: steps.fmt.outcome == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format Check ❌
+
+            Some files are not properly formatted. Run \`terraform fmt -recursive\` to fix.
+
+            *Workflow: \`${{ github.workflow }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Fail on format issues
+        if: steps.fmt.outcome == 'failure'
+        run: exit 1
