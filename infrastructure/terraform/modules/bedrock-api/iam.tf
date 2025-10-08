@@ -46,7 +46,7 @@ data "aws_iam_policy_document" "lambda_inline" {
     ]
     # Scope down to the chosen model in this region; widen if you support multiple
     resources = [
-      "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:model/${var.bedrock_model_id}"
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_model_id}"
     ]
   }
 }
