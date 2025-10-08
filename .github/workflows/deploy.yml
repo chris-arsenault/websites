@@ -228,25 +228,27 @@ jobs:
 
       - name: Terraform Init
         run: |
-          terraform -chdir="infrastructure/terraform" init \
+          cd infrastructure/terraform
+          terraform init \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="key=static-websites/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
             -backend-config="encrypt=true"
 
       - name: Terraform Apply
         run: |
-          terraform -chdir="infrastructure/terraform" apply -auto-approve tfplan
+          cd infrastructure/terraform
+          
+          terraform apply -auto-approve tfplan
           echo "RAW"
-          TF_LOG=debug terraform -chdir="infrastructure/terraform" output -raw all_sites
+          TF_LOG=debug terraform output -raw all_sites
           echo "RAW"
-          terraform -chdir="infrastructure/terraform" output -raw cloudfront_distribution_id 
+          terraform output -raw cloudfront_distribution_id 
           echo "JSON"
-          terraform -chdir="infrastructure/terraform" output -json
+          terraform output -json
           
           # Get all sites information from Terraform outputs
-          SITES_JSON=$(terraform -chdir="infrastructure/terraform" output -json all_sites)
+          SITES_JSON=$(terraform output -json all_sites)
           echo "sites_json<<EOF" >> $GITHUB_OUTPUT
           echo "$SITES_JSON" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -254,7 +256,7 @@ jobs:
           echo "📊 Site configurations:"
           echo "$SITES_JSON" | jq '.'
           
-          terraform -chdir="infrastructure/terraform" output -json all_sites > sites-config.json
+          terraform output -json all_sites > sites-config.json
           cat sites-config.json
 
       - name: Get Terraform Outputs
