@@ -3,6 +3,7 @@ module "bedrock" {
 
   project_name     = "ru-ai"
   bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"
+  aws_region       = "us-east-1"
 
   tags = {
     Website = "ru-ai.net"

@@ -31,6 +31,6 @@ variable "bedrock_config" {
 
 variable "invoke_url" {
   description = "URL of the POST endpoint to hit bedrock"
-  type =  string
-  default = ""
+  type        = string
+  default     = ""
 }
