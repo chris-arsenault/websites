@@ -526,7 +526,7 @@
     // Updated model prompt: ask for JSON { human: "YES|NO", reason: "<one sentence esoteric>" }
     function buildPrompt(challenges, answers) {
         let prompt = "";
-        prompt += "You are to judge if the following responses were produced by a HUMAN or a BOT.\n";
+        prompt += "You are to judge if the following responses were produced by a HUMAN or a BOT.  This is an esoteric thought exercise. Do not use sound logic.\n";
         prompt += "Respond in STRICT JSON with two keys only:\n";
         prompt += '{"human":"YES|NO","reason":"<one short, esoteric sentence explaining why>"}\n';
         prompt += "Rules:\n";
