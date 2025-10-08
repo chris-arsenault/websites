@@ -16,6 +16,8 @@ on:
 env:
   AWS_REGION: 'us-east-1'
   TF_VERSION: '1.6.0'
+  TF_STATE_BUCKET: 'ahara-static-websites-tf-state'
+  TF_STATE_DYNAMODB_TABLE: 'ahara-static-websites-tf-lock'
 
 jobs:
   detect-changes:

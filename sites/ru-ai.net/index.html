@@ -470,7 +470,7 @@
 
     async function callBedrock(prompt) {
         try {
-            const { credentials, identityId } = await getBrowserAwsCredentials();
+            const { credentials, identityId } = await getBedrockCredentials();
             console.log("Cognito Identity ID:", identityId);
 
             const client = new BedrockRuntimeClient({
