@@ -249,9 +249,16 @@
 <script src="config.js"></script>
 
 <script type="module">
-    import { CognitoIdentityClient } from 'https://esm.sh/@aws-sdk/client-cognito-identity@3.450.0';
-    import { fromCognitoIdentityPool } from 'https://esm.sh/@aws-sdk/credential-providers@3.450.0';
-    import { BedrockRuntimeClient, InvokeModelCommand } from 'https://esm.sh/@aws-sdk/client-bedrock-runtime@3.450.0';
+    import {
+        CognitoIdentityClient,
+        GetIdCommand,
+        GetCredentialsForIdentityCommand
+    } from 'https://esm.sh/@aws-sdk/client-cognito-identity@3.450.0';
+
+    import {
+        BedrockRuntimeClient,
+        InvokeModelCommand
+    } from 'https://esm.sh/@aws-sdk/client-bedrock-runtime@3.450.0';
 
 
     const allChallenges = [
