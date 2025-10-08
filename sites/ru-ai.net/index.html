@@ -247,15 +247,20 @@
     <div id="result" class="hidden"></div>
 </div>
 <script src="config.js"></script>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1481.0.min.js"></script>
 
 <script type="module">
-    import { fromCognitoIdentityPool } from "https://esm.sh/@aws-sdk/credential-providers";
-    import { CognitoIdentityClient } from "https://esm.sh/@aws-sdk/client-cognito-identity";
+    // ---- ESM imports (browser-safe) ----
+    import {
+        CognitoIdentityClient,
+        GetIdCommand,
+        GetCredentialsForIdentityCommand
+    } from "https://esm.sh/@aws-sdk/client-cognito-identity?target=es2022";
 
     import {
         BedrockRuntimeClient,
         InvokeModelCommand
-    } from 'https://esm.sh/@aws-sdk/client-bedrock-runtime@3.450.0';
+    } from "https://esm.sh/@aws-sdk/client-bedrock-runtime?target=es2022";
 
 
     const allChallenges = [
@@ -420,28 +425,31 @@
     };
 
     async function getBedrockCredentials() {
-        const client = new CognitoIdentityClient({
-            region: CONFIG.region
-        });
-        const identityPoolId = CONFIG.identityPoolId;
+        const client = new CognitoIdentityClient({ region: CONFIG.region });
 
+        // Step A: resolve an identity
+        const getIdRes = await client.send(new GetIdCommand({
+            IdentityPoolId: CONFIG.identityPoolId
+        }));
 
-        const provider = fromCognitoIdentityPool({
-            client,
-            identityPoolId,
-        });
+        const identityId = getIdRes.IdentityId;
 
-        const creds = await provider();
+        // Step B: exchange identity for temporary creds
+        const getCredsRes = await client.send(new GetCredentialsForIdentityCommand({
+            IdentityId: identityId
+        }));
 
-        console.log("Creds:", creds);
-        console.log("Identity ID:", creds.identityId);
+        const c = getCredsRes.Credentials; // { AccessKeyId, SecretKey, SessionToken, Expiration }
 
-        // Return credentials in format Bedrock client expects
+        // Return in shape the AWS SDK expects
         return {
-            accessKeyId: creds.AccessKeyId,
-            secretAccessKey: creds.SecretKey,
-            sessionToken: creds.SessionToken,
-            expiration: creds.Expiration
+            identityId,
+            credentials: {
+                accessKeyId: c.AccessKeyId,
+                secretAccessKey: c.SecretKey,
+                sessionToken: c.SessionToken,
+                expiration: new Date(c.Expiration)
+            }
         };
     }
 
@@ -462,7 +470,8 @@
 
     async function callBedrock(prompt) {
         try {
-            const credentials = await getBedrockCredentials();
+            const { credentials, identityId } = await getBrowserAwsCredentials();
+            console.log("Cognito Identity ID:", identityId);
 
             const client = new BedrockRuntimeClient({
                 region: CONFIG.region,
