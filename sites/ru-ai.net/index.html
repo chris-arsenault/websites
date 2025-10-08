@@ -249,11 +249,8 @@
 <script src="config.js"></script>
 
 <script type="module">
-    import {
-        CognitoIdentityClient,
-        GetIdCommand,
-        GetCredentialsForIdentityCommand
-    } from 'https://esm.sh/@aws-sdk/client-cognito-identity@3.450.0';
+    import { fromCognitoIdentityPool } from "https://esm.sh/@aws-sdk/credential-providers";
+    import { CognitoIdentityClient } from "https://esm.sh/@aws-sdk/client-cognito-identity";
 
     import {
         BedrockRuntimeClient,
@@ -423,30 +420,28 @@
     };
 
     async function getBedrockCredentials() {
-        const cognitoClient = new CognitoIdentityClient({
+        const client = new CognitoIdentityClient({
             region: CONFIG.region
         });
+        const identityPoolId = CONFIG.identityPoolId;
 
-        // Step 1: Get Identity ID
-        const getIdResponse = await cognitoClient.send(
-            new GetIdCommand({
-                IdentityPoolId: CONFIG.identityPoolId
-            })
-        );
 
-        // Step 2: Get credentials for that identity
-        const getCredsResponse = await cognitoClient.send(
-            new GetCredentialsForIdentityCommand({
-                IdentityId: getIdResponse.IdentityId
-            })
-        );
+        const provider = fromCognitoIdentityPool({
+            client,
+            identityPoolId,
+        });
+
+        const creds = await provider();
+
+        console.log("Creds:", creds);
+        console.log("Identity ID:", creds.identityId);
 
         // Return credentials in format Bedrock client expects
         return {
-            accessKeyId: getCredsResponse.Credentials.AccessKeyId,
-            secretAccessKey: getCredsResponse.Credentials.SecretKey,
-            sessionToken: getCredsResponse.Credentials.SessionToken,
-            expiration: getCredsResponse.Credentials.Expiration
+            accessKeyId: creds.AccessKeyId,
+            secretAccessKey: creds.SecretKey,
+            sessionToken: creds.SessionToken,
+            expiration: creds.Expiration
         };
     }
 
