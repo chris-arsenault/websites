@@ -1,7 +1,7 @@
 output "all_sites" {
   description = "All site details in a map for easy iteration"
   value = {
-    ru-ai = {
+    "ru-ai.net" = {
       url               = module.ru-ai.website_url
       hostname          = module.ru-ai.hostname
       s3_bucket         = module.ru-ai.s3_bucket_name

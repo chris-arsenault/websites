@@ -250,17 +250,7 @@
 <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1481.0.min.js"></script>
 
 <script type="module">
-    // ---- ESM imports (browser-safe) ----
-    import {
-        CognitoIdentityClient,
-        GetIdCommand,
-        GetCredentialsForIdentityCommand
-    } from "https://esm.sh/@aws-sdk/client-cognito-identity?target=es2022";
-
-    import {
-        BedrockRuntimeClient,
-        InvokeModelCommand
-    } from "https://esm.sh/@aws-sdk/client-bedrock-runtime?target=es2022";
+    import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 
     const allChallenges = [
@@ -424,33 +414,68 @@
         userAnswers[challengeId] = word;
     };
 
-    async function getBedrockCredentials() {
-        const client = new CognitoIdentityClient({ region: CONFIG.region });
+    // --- Cognito Identity via JSON-RPC (no AWS SDK, no fs) ---
+    async function getCognitoIdentityId({ region, identityPoolId, logins }) {
+        const url = `https://cognito-identity.${region}.amazonaws.com/`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-amz-json-1.1",
+                "X-Amz-Target": "AWSCognitoIdentityService.GetId"
+            },
+            body: JSON.stringify({
+                IdentityPoolId: identityPoolId,
+                ...(logins ? { Logins: logins } : {})
+            })
+        });
+        if (!res.ok) {
+            throw new Error(`GetId failed: ${res.status} ${await res.text()}`);
+        }
+        const json = await res.json();
+        return json.IdentityId;
+    }
 
-        // Step A: resolve an identity
-        const getIdRes = await client.send(new GetIdCommand({
-            IdentityPoolId: CONFIG.identityPoolId
-        }));
-
-        const identityId = getIdRes.IdentityId;
-
-        // Step B: exchange identity for temporary creds
-        const getCredsRes = await client.send(new GetCredentialsForIdentityCommand({
-            IdentityId: identityId
-        }));
-
-        const c = getCredsRes.Credentials; // { AccessKeyId, SecretKey, SessionToken, Expiration }
-
-        // Return in shape the AWS SDK expects
+    async function getCognitoCredentials({ region, identityId, logins }) {
+        const url = `https://cognito-identity.${region}.amazonaws.com/`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-amz-json-1.1",
+                "X-Amz-Target": "AWSCognitoIdentityService.GetCredentialsForIdentity"
+            },
+            body: JSON.stringify({
+                IdentityId: identityId,
+                ...(logins ? { Logins: logins } : {})
+            })
+        });
+        if (!res.ok) {
+            throw new Error(`GetCredentialsForIdentity failed: ${res.status} ${await res.text()}`);
+        }
+        const json = await res.json();
+        const c = json.Credentials; // { AccessKeyId, SecretKey, SessionToken, Expiration }
         return {
-            identityId,
-            credentials: {
-                accessKeyId: c.AccessKeyId,
-                secretAccessKey: c.SecretKey,
-                sessionToken: c.SessionToken,
-                expiration: new Date(c.Expiration)
-            }
+            accessKeyId: c.AccessKeyId,
+            secretAccessKey: c.SecretKey,
+            sessionToken: c.SessionToken,
+            expiration: new Date(c.Expiration)
         };
+    }
+
+    async function getBrowserAwsCredentials() {
+        const identityId = await getCognitoIdentityId({
+            region: CONFIG.region,
+            identityPoolId: CONFIG.identityPoolId,
+            logins: CONFIG.logins
+        });
+        console.log("Cognito Identity ID:", identityId);
+
+        const creds = await getCognitoCredentials({
+            region: CONFIG.region,
+            identityId,
+            logins: CONFIG.logins
+        });
+
+        return { identityId, credentials: creds };
     }
 
     function buildPrompt(challenges, answers) {
@@ -468,42 +493,42 @@
         return prompt;
     }
 
+    // --- Bedrock call using aws4fetch (SigV4 in browser, no SDK) ---
     async function callBedrock(prompt) {
-        try {
-            const { credentials, identityId } = await getBedrockCredentials();
-            console.log("Cognito Identity ID:", identityId);
+        const { credentials } = await getBrowserAwsCredentials();
 
-            const client = new BedrockRuntimeClient({
-                region: CONFIG.region,
-                credentials: credentials
-            });
+        const aws = new AwsClient({
+            accessKeyId: credentials.accessKeyId,
+            secretAccessKey: credentials.secretAccessKey,
+            sessionToken: credentials.sessionToken,
+            region: CONFIG.region,
+            service: "bedrock"
+        });
 
-            const payload = {
-                anthropic_version: "bedrock-2023-05-31",
-                max_tokens: 10,
-                messages: [
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ]
-            };
+        const url = `https://bedrock-runtime.${CONFIG.region}.amazonaws.com/model/${encodeURIComponent(CONFIG.bedrockModelId)}/invoke`;
 
-            const command = new InvokeModelCommand({
-                modelId: CONFIG.bedrockModelId,
-                contentType: "application/json",
-                accept: "application/json",
-                body: JSON.stringify(payload)
-            });
+        // Anthropic on Bedrock payload
+        const payload = {
+            anthropic_version: "bedrock-2023-05-31",
+            max_tokens: 10,
+            messages: [{ role: "user", content: prompt }]
+        };
 
-            const response = await client.send(command);
-            const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        const res = await aws.fetch(url, {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                "accept": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
 
-            return responseBody.content[0].text.trim().toUpperCase();
-        } catch (error) {
-            console.error('Bedrock error:', error);
-            throw error;
+        if (!res.ok) {
+            throw new Error(`Bedrock error ${res.status}: ${await res.text()}`);
         }
+
+        const json = await res.json();
+        return (json?.content?.[0]?.text || "").trim().toUpperCase();
     }
 
     document.getElementById('submitBtn').addEventListener('click', async () => {
