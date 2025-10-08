@@ -68,6 +68,7 @@ def _check_and_increment(user_id: str, now: datetime):
         )
         return True, resp["Attributes"]["count"]
     except ClientError as e:
+        print(e)
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
             return False, RATE_LIMIT
         raise
@@ -77,10 +78,14 @@ def handler(event, context):
     if event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
         return _json_response(200, {"ok": True})
 
+
     user_id = _get_user_id(event)
+    print(f"UserId: {user_id}")
     now = datetime.now(timezone.utc)
 
     ok, count = _check_and_increment(user_id, now)
+    print(f"count: {count}")
+
     if not ok:
         return _json_response(429, {"message": "Rate limit exceeded", "limit_per_minute": RATE_LIMIT})
 
