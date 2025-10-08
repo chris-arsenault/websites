@@ -22,5 +22,7 @@ resource "aws_lambda_function" "bedrock_proxy" {
     }
   }
 
+  depends_on = [data.archive_file.lambda_zip]
+
   tags = var.tags
 }
