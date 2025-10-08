@@ -250,15 +250,28 @@
 
 <script type="module">
     const allChallenges = [
+        // ——— Existence / Philosophy ———
         {
             id: 'existential',
+            category: 'existence',
             title: 'Existential Query',
             description: 'In exactly 7 words, describe the color blue to someone who has never seen.',
             type: 'text',
             validate: (answer) => answer.trim().split(/\s+/).length === 7
         },
         {
+            id: 'ontological-loyal-shadows',
+            category: 'existence',
+            title: 'Ontological Dilemma',
+            description: 'Explain why shadows are loyal, in exactly 11 words.',
+            type: 'text',
+            validate: (answer) => answer.trim().split(/\s+/).length === 11
+        },
+
+        // ——— Color / Synesthesia ———
+        {
             id: 'color-tuesday',
+            category: 'color',
             title: 'Chromatic Intuition Test',
             description: 'Select the color that best represents the feeling of "Tuesday afternoon".',
             type: 'color',
@@ -266,35 +279,70 @@
             validate: () => true
         },
         {
+            id: 'spectrum-silence',
+            category: 'color',
+            title: 'Spectrum Riddle',
+            description: 'Which color tastes most like silence, and why?',
+            type: 'text',
+            validate: (answer) => answer.trim().length > 5
+        },
+
+        // ——— Time / Temporal ———
+        {
             id: 'math-seconds',
+            category: 'time',
             title: 'Temporal Mathematics',
             description: 'How many seconds have you been alive? (Approximate is fine)',
             type: 'number',
-            validate: (answer) => answer > 0
+            validate: (answer) => Number(answer) > 0
         },
         {
+            id: 'time-perception',
+            category: 'time',
+            title: 'Temporal Perception Analysis',
+            description: 'How long is a moment? (Provide your answer in milliseconds)',
+            type: 'number',
+            validate: (answer) => Number(answer) > 0
+        },
+        {
+            id: 'chronometric-taffy',
+            category: 'time',
+            title: 'Chronometric Illusion',
+            description: 'If a minute could stretch like taffy, how long would it taste?',
+            type: 'text',
+            validate: (answer) => answer.trim().length > 3
+        },
+
+        // ——— Dreams / Subconscious ———
+        {
             id: 'dream',
+            category: 'dreams',
             title: 'Subconscious Analysis',
             description: 'Describe your most recent dream in haiku format (5-7-5 syllables).',
             type: 'textarea',
             validate: (answer) => answer.length > 10
         },
         {
+            id: 'oneiric-flavor',
+            category: 'dreams',
+            title: 'Oneiric Puzzle',
+            description: 'If last night’s dream had a flavor, what would it be?',
+            type: 'text',
+            validate: (answer) => answer.trim().length > 3
+        },
+
+        // ——— Numbers / Abstract Qualities ———
+        {
             id: 'sound-taste',
+            category: 'numbers',
             title: 'Synesthetic Perception',
             description: 'What does the number 7 taste like? Be specific.',
             type: 'text',
             validate: (answer) => answer.length > 5
         },
         {
-            id: 'philosophical',
-            title: 'Philosophical Paradox',
-            description: 'If a tree falls in a forest and no one is around, what color is it?',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
             id: 'emotion-number',
+            category: 'numbers',
             title: 'Emotional Quantification',
             description: 'On a scale of 1-100, how purple is the emotion "nostalgia"?',
             type: 'slider',
@@ -303,7 +351,36 @@
             validate: () => true
         },
         {
+            id: 'arithmetic-laughter',
+            category: 'numbers',
+            title: 'Arithmetic Paradox',
+            description: 'Divide infinity by laughter. What remains?',
+            type: 'text',
+            validate: (answer) => answer.trim().length > 0
+        },
+
+        // ——— Paradox / Logic ———
+        {
+            id: 'philosophical',
+            category: 'paradox',
+            title: 'Philosophical Paradox',
+            description: 'If a tree falls in a forest and no one is around, what color is it?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'recursive-doubt',
+            category: 'paradox',
+            title: 'Recursive Riddle',
+            description: 'If a question doubts itself, is the answer still true?',
+            type: 'text',
+            validate: (answer) => answer.trim().length > 0
+        },
+
+        // ——— Memory / Sensory ———
+        {
             id: 'memory-texture',
+            category: 'memory',
             title: 'Sensory Memory Test',
             description: 'What texture is your earliest childhood memory?',
             type: 'select',
@@ -311,7 +388,18 @@
             validate: () => true
         },
         {
+            id: 'mnemonic-temperature',
+            category: 'memory',
+            title: 'Mnemonic Fabric',
+            description: 'What temperature does your earliest memory feel like? (°C)',
+            type: 'number',
+            validate: (answer) => !Number.isNaN(Number(answer)) && Number(answer) > -273.15
+        },
+
+        // ——— Association / Symbolism ———
+        {
             id: 'word-association',
+            category: 'association',
             title: 'Abstract Word Association',
             description: 'Which word best describes the smell of mathematics?',
             type: 'word-choice',
@@ -319,11 +407,35 @@
             validate: () => true
         },
         {
-            id: 'time-perception',
-            title: 'Temporal Perception Analysis',
-            description: 'How long is a moment? (Provide your answer in milliseconds)',
-            type: 'number',
-            validate: (answer) => answer > 0
+            id: 'symbolic-animal-zero',
+            category: 'association',
+            title: 'Symbolic Connection',
+            description: 'Which animal best describes the sound of zero?',
+            type: 'word-choice',
+            options: ['Owl', 'Fox', 'Whale', 'Moth', 'Cat', 'Cicada'],
+            validate: () => true
+        },
+
+        // ——— Emotion / Inner Life ———
+        {
+            id: 'mood-cartography',
+            category: 'emotion',
+            title: 'Mood Cartography',
+            description: 'Map the emotion "anticipation" to a weather pattern.',
+            type: 'select',
+            options: ['Dawn fog', 'Sunbreaks', 'Distant thunder', 'Humid stillness', 'Scattered showers', 'Hail at noon'],
+            validate: () => true
+        },
+
+        // ——— Surreal / Metaphysics ———
+        {
+            id: 'quantum-folklore',
+            category: 'surreal',
+            title: 'Quantum Folklore',
+            description: 'If gravity could sing, what genre would it prefer?',
+            type: 'select',
+            options: ['Jazz', 'Drone', 'Gregorian chant', 'Vaporwave', 'Blues', 'Noise'],
+            validate: () => true
         }
     ];
 
@@ -331,7 +443,7 @@
     let userAnswers = {};
 
     function init() {
-        const numChallenges = Math.floor(Math.random() * 3) + 1;
+        const numChallenges = Math.floor(Math.random() * 3) + 2; // 2–4 (unchanged)
         const shuffled = [...allChallenges].sort(() => Math.random() - 0.5);
         selectedChallenges = shuffled.slice(0, numChallenges);
 
@@ -394,6 +506,7 @@
         });
     }
 
+    // expose the original click handlers (unchanged behavior)
     window.selectColor = function(color, challengeId) {
         document.querySelectorAll(`[data-challenge="${challengeId}"]`).forEach(box => {
             box.classList.remove('selected');
@@ -410,11 +523,17 @@
         userAnswers[challengeId] = word;
     };
 
+    // Updated model prompt: ask for JSON { human: "YES|NO", reason: "<one sentence esoteric>" }
     function buildPrompt(challenges, answers) {
-        let prompt = "You are analyzing responses to esoteric questions to determine if they were answered by a human or a bot. ";
-        prompt += "Respond with ONLY 'YES' if you think this is a human, or 'NO' if you think this is a bot. ";
-        prompt += "Do not provide any explanation, just YES or NO.\n\n";
-        prompt += "Questions and Answers:\n\n";
+        let prompt = "";
+        prompt += "You are to judge if the following responses were produced by a HUMAN or a BOT.\n";
+        prompt += "Respond in STRICT JSON with two keys only:\n";
+        prompt += '{"human":"YES|NO","reason":"<one short, esoteric sentence explaining why>"}\n';
+        prompt += "Rules:\n";
+        prompt += "- Output ONLY raw JSON. No markdown, no backticks, no extra keys.\n";
+        prompt += "- \"human\" MUST be exactly YES or NO (uppercase).\n";
+        prompt += "- \"reason\" MUST be a single sentence, poetic/esoteric but concise.\n\n";
+        prompt += "Consider the Q&A below:\n\n";
 
         challenges.forEach((challenge, index) => {
             const answer = answers[challenge.id] || 'No answer provided';
@@ -427,15 +546,14 @@
 
     async function callBedrock(prompt) {
         const payload = {
-            prompt, // or you can send messages: [...]
-            max_tokens: 10
+            prompt,
+            max_tokens: 64
         };
 
         const res = await fetch(CONFIG.invoke_url, {
             method: "POST",
             headers: {
                 "content-type": "application/json",
-                // optional: identify the user for rate limiting
                 "x-user-id": CONFIG.userId || "guest"
             },
             body: JSON.stringify(payload)
@@ -446,9 +564,161 @@
         }
 
         const json = await res.json();
+        // Return raw text as-is (no uppercasing) so JSON can be parsed
+        return (json.text || "").trim();
+    }
 
-        // If you want just the normalized text that the Lambda returns:
-        return (json.text || "").trim().toUpperCase();
+    // ——— Category-themed result messaging ———
+    const categoryMessages = {
+        existence: {
+            success: [
+                "You’ve wrestled with being itself—definitely human.",
+                "Your words shimmer with existential unease. Verified.",
+                "Authenticity radiates through your paradoxical clarity.",
+                "You question the question—classic human move."
+            ],
+            failure: [
+                "Ontology too consistent—suspected machine.",
+                "Absence of doubt detected—unhuman cadence.",
+                "Philosophy without hesitation reads synthetic.",
+                "You solved being; humans don’t."
+            ]
+        },
+        color: {
+            success: [
+                "Synesthetic chaos accepted: certified human.",
+                "Colors felt, not computed—welcome, human.",
+                "Only a human confuses Tuesday with salmon pink.",
+                "Your palette leaks emotion—human verified."
+            ],
+            failure: [
+                "Chromatic logic was too precise.",
+                "Colors aligned like lookup tables—robotic hue.",
+                "No emotional noise in spectrum—mechanical.",
+                "Pigments snapped to grid—non-human."
+            ]
+        },
+        time: {
+            success: [
+                "Your warped sense of seconds betrays a human heartbeat.",
+                "Temporal drift confirmed: you experience time irrationally.",
+                "Moments stretched like gum—undeniably human.",
+                "Your millennia feel like Mondays—human."
+            ],
+            failure: [
+                "Millisecond accuracy exceeded mortal thresholds.",
+                "You treated time like a processor clock.",
+                "Temporal perception too linear—suspect automation.",
+                "No lag, no rush—machine tempo."
+            ]
+        },
+        dreams: {
+            success: [
+                "Dreams dripping nonsense—yes, a human mind at work.",
+                "Your haiku bleeds surreal humanity.",
+                "Sleep’s illogic confirms your carbon origins.",
+                "Your REM is gloriously unruly—human."
+            ],
+            failure: [
+                "Dream coherence above safe threshold.",
+                "Nightscape too neat—mechanical subconscious detected.",
+                "No stray symbols in the dark—robotic.",
+                "You dream in schemas—non-human."
+            ]
+        },
+        numbers: {
+            success: [
+                "Your arithmetic of taste proves humanity’s irrational core.",
+                "Infinity divided by laughter? That’s pure human math.",
+                "Quantifying purple emotions—certifiably human.",
+                "Your numbers came back scented—human."
+            ],
+            failure: [
+                "Numbers aligned too perfectly.",
+                "Emotionless arithmetic betrays circuitry.",
+                "Statistics without spice—robot detected.",
+                "Quantities lacked contradiction—synthetic."
+            ]
+        },
+        paradox: {
+            success: [
+                "You thrived in contradiction—welcome, human paradox.",
+                "Illogic handled with grace: human verified.",
+                "Contradiction embraced, not solved. Humanity detected.",
+                "You made peace with both/and—human."
+            ],
+            failure: [
+                "Resolution too clean—bot detected.",
+                "Paradox parsed like code.",
+                "Contradictions flattened algorithmically.",
+                "You debugged the absurd—non-human."
+            ]
+        },
+        memory: {
+            success: [
+                "Textures embedded in neurons, not chips.",
+                "The warmth of your memory proves your humanity.",
+                "Your nostalgia has grain—human verified.",
+                "Memory arrived with fingerprints—human."
+            ],
+            failure: [
+                "No tactile warmth in responses—suspect robot.",
+                "Memory lacks fuzz, grit, or blood.",
+                "Mechanical recall identified.",
+                "Your past is checksum-stable—non-human."
+            ]
+        },
+        association: {
+            success: [
+                "Symbolic chaos registered as authentic.",
+                "Your associations defy pattern recognition—human.",
+                "Mathematics smells like rust—only humans know.",
+                "Metaphors collided correctly—human."
+            ],
+            failure: [
+                "Associations aligned with embeddings.",
+                "Too semantic, not enough nonsense.",
+                "Symbolism lacked irrational spark.",
+                "Vectors without vibes—robot."
+            ]
+        },
+        emotion: {
+            success: [
+                "Weather-mapping emotions confirms humanity.",
+                "Melancholy is triangular—definitely human geometry.",
+                "Your emotional cartography shows messy brilliance.",
+                "Your forecast contains feelings—human."
+            ],
+            failure: [
+                "Emotion flattened to data points.",
+                "Your weather had no storms—robot detected.",
+                "Feelings processed with inhuman symmetry.",
+                "Isobars without ache—synthetic."
+            ]
+        },
+        surreal: {
+            success: [
+                "Only a human could hear gravity’s jazz.",
+                "Dragon-regret arithmetic is peak humanity.",
+                "Surrealism achieved: verified human.",
+                "You sang with the void—human."
+            ],
+            failure: [
+                "Your myth was too consistent.",
+                "Genre assignment lacked absurdity—suspect AI.",
+                "Cosmic nonsense was overfit—robot.",
+                "Dragons counted in binary—non-human."
+            ]
+        }
+    };
+
+    function pickRandom(arr, n = 1) {
+        const copy = [...arr];
+        const out = [];
+        while (n-- > 0 && copy.length) {
+            out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+        }
+        return out;
     }
 
     document.getElementById('submitBtn').addEventListener('click', async () => {
@@ -469,14 +739,36 @@
         document.getElementById('loading').classList.remove('hidden');
 
         try {
-            // Build prompt and call Bedrock
+            // Build prompt and call model
             const prompt = buildPrompt(selectedChallenges, userAnswers);
-            const bedrockResponse = await callBedrock(prompt);
+            const bedrockText = await callBedrock(prompt);
 
-            // Determine if human or robot based on response
-            const isHuman = bedrockResponse.includes('YES');
+            let isHuman = false;
+            let modelReason = ""; // optional, from JSON path
 
-            setTimeout(() => showResult(isHuman), 1000);
+            // Try to parse JSON first
+            let parsed = null;
+            try {
+                parsed = JSON.parse(bedrockText);
+            } catch (_) {
+                parsed = null;
+            }
+
+            if (parsed && typeof parsed === 'object') {
+                const verdict = ((parsed.human || parsed.verdict || parsed.result || "") + "").toUpperCase();
+                isHuman = verdict.includes('YES');
+                modelReason = (parsed.reason || parsed.explanation || "").toString().trim();
+            } else {
+                // Fallback: scan text for YES/NO (legacy behavior)
+                const upper = bedrockText.toUpperCase();
+                const hasYES = upper.includes('YES');
+                const hasNO = upper.includes('NO');
+                if (hasYES && !hasNO) isHuman = true;
+                else if (hasNO && !hasYES) isHuman = false;
+                else isHuman = hasYES; // tie-breaker same as before
+            }
+
+            setTimeout(() => showResult(isHuman, modelReason), 1000);
         } catch (error) {
             document.getElementById('loading').classList.add('hidden');
             const errorDiv = document.getElementById('error');
@@ -487,60 +779,59 @@
         }
     });
 
-    function showResult(isHuman) {
+    function showResult(isHuman, modelReason = "") {
         document.getElementById('loading').classList.add('hidden');
         const resultDiv = document.getElementById('result');
 
+        // Determine which categories were used in this session
+        const usedCategories = [...new Set(selectedChallenges.map(c => c.category))];
+        const chosenCategory = usedCategories.length
+            ? usedCategories[Math.floor(Math.random() * usedCategories.length)]
+            : 'existence'; // fallback
+
+        const pools = categoryMessages[chosenCategory] || categoryMessages['existence'];
+
         if (isHuman) {
-            const humanResponses = [
-                "Congratulations! Our AI has determined you are genuinely human.",
-                "Well done! Your responses exhibit authentic human characteristics.",
-                "Success! The quantum algorithms confirm your humanity.",
-                "Impressive! You've passed the Turing test with flying colors.",
-                "Verified! Your existential dread levels are perfectly human.",
-                "Confirmed! Only a human could answer with such beautiful chaos.",
-                "Accepted! Your responses show the delightful irrationality of humanity."
-            ];
-
-            const response = humanResponses[Math.floor(Math.random() * humanResponses.length)];
-
+            const line = pickRandom(pools.success, 1)[0] || "Verified human.";
+            const reasonHtml = modelReason
+                ? `<p style="margin-top: 10px; font-style: italic;">AI’s take: ${escapeHtml(modelReason)}</p>`
+                : "";
             resultDiv.className = 'result human';
             resultDiv.innerHTML = `
                     <h2>✅ HUMAN VERIFIED</h2>
                     <p style="font-size: 20px; margin: 20px 0;"><strong>Status: HUMAN DETECTED</strong></p>
-                    <p>${response}</p>
-                    <p style="margin-top: 20px; font-style: italic;">Welcome, fellow carbon-based life form!</p>
+                    <p>${line}</p>
+                    ${reasonHtml}
+                    <p style="margin-top: 20px; font-style: italic;">Welcome, fellow carbon-based life form.</p>
                 `;
         } else {
-            const robotReasons = [
-                "Response time was suspiciously consistent (±0.003ms)",
-                "Cursor movement patterns displayed geometric precision",
-                "Breathing rate remained at exactly 60 cycles per minute",
-                "Existential dread levels below human threshold",
-                "Failed to demonstrate irrational decision-making",
-                "Perfect spelling indicates non-human origin",
-                "Temporal consciousness misalignment detected",
-                "Insufficient quantum uncertainty in responses",
-                "Dreams contained too much logical coherence",
-                "Color perception lacks emotional inconsistency"
-            ];
-
-            const randomReasons = robotReasons.sort(() => Math.random() - 0.5).slice(0, 3);
-
+            const lines = pickRandom(pools.failure, Math.min(3, pools.failure.length));
+            const reasonItem = modelReason
+                ? `<p>• ${escapeHtml(modelReason)}</p>`
+                : "";
             resultDiv.className = 'result robot';
             resultDiv.innerHTML = `
                     <h2>⚠️ VERIFICATION FAILED</h2>
                     <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ROBOT DETECTED</strong></p>
                     <p>Our AI has determined you are not human.</p>
                     <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
-                    <p>• ${randomReasons[0]}</p>
-                    <p>• ${randomReasons[1]}</p>
-                    <p>• ${randomReasons[2]}</p>
+                    ${reasonItem}
+                    ${lines.map(l => `<p>• ${l}</p>`).join('')}
                     <p style="margin-top: 20px; font-style: italic;">Access denied. Please return to your charging station.</p>
                 `;
         }
 
         resultDiv.classList.remove('hidden');
+    }
+
+    // Basic HTML escaping for modelReason safety
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     init();
