@@ -241,7 +241,9 @@ jobs:
           cd infrastructure/terraform
           terraform apply -auto-approve tfplan
           echo "RAW"
-          terraform output -raw
+          terraform output -raw all_sites
+          echo "RAW"
+          terraform output -raw cloudfront_distribution_id 
           echo "JSON"
           terraform output -json
           
