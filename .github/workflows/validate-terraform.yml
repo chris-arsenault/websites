@@ -43,11 +43,7 @@ jobs:
         run: |
           cd infrastructure/terraform
 
-          terraform init \
-          -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-          -backend-config="region=${{ env.AWS_REGION }}" \
-          -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
-          -backend-config="encrypt=true"
+          terraform init -backend=false
 
       - name: Terraform Validate
         id: validate

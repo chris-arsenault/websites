@@ -111,7 +111,7 @@ def handler(event, context):
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": int(payload.get("max_tokens", 256)),
         "temperature": float(payload.get("temperature", 0)),
-        "messages": prompt
+        "messages": messages
     }
 
     try:
