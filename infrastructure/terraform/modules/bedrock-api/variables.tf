@@ -18,7 +18,7 @@ variable "rate_limit_per_minute" {
 variable "bedrock_model_id" {
   type = string
   # example Anthropics on Bedrock; change as needed
-  default     = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  default     = "anthropic.claude-3-haiku-20240307-v1:0"
   description = "Bedrock model ID to invoke"
 }
 
