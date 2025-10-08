@@ -6,6 +6,10 @@ terraform {
       version = "~> 6.0"
     }
   }
+  backend "s3" {
+    region = "us-east-1"
+    key    = "ahara-static-websites.tfstate"
+  }
 }
 
 # Provider for us-east-1 (required for ACM certificates for CloudFront)
