@@ -221,7 +221,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download Terraform Plan
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: tfplan
           path: infrastructure/terraform
@@ -301,7 +301,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download sites configuration
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sites-config
 
@@ -406,7 +406,7 @@ jobs:
     steps:
       - name: Download sites configuration
         if: needs.terraform-apply.result == 'success'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sites-config
         continue-on-error: true
