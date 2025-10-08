@@ -1,0 +1,63 @@
+# S3 bucket for website content
+resource "aws_s3_bucket" "website" {
+  bucket = var.hostname
+
+  tags = merge(var.tags, {
+    Name = var.hostname
+  })
+}
+
+# Block public access (CloudFront will access via OAC)
+resource "aws_s3_bucket_public_access_block" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Enable versioning for the bucket
+resource "aws_s3_bucket_versioning" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Upload index.html
+resource "aws_s3_object" "index" {
+  bucket       = aws_s3_bucket.website.id
+  key          = "index.html"
+  source       = var.index_html_path
+  etag         = filemd5(var.index_html_path)
+  content_type = "text/html"
+
+  tags = var.tags
+}
+
+# S3 bucket policy to allow CloudFront access
+resource "aws_s3_bucket_policy" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.website.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.website.arn
+          }
+        }
+      }
+    ]
+  })
+}

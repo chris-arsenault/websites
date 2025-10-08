@@ -1,0 +1,5 @@
+# Data source for existing hosted zone (if it exists)
+data "aws_route53_zone" "main" {
+  name         = var.domain_name
+  private_zone = false
+}

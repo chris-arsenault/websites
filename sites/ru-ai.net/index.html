@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Verification System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .challenge {
+            background: #f5f5f5;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .challenge-title {
+            font-size: 18px;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .challenge-description {
+            color: #555;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            font-family: 'Courier New', monospace;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            background: #ff6b6b;
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .result h2 {
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+
+        .result p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .color-box {
+            aspect-ratio: 1;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-box:hover {
+            transform: scale(1.05);
+        }
+
+        .color-box.selected {
+            border-color: #333;
+            transform: scale(0.95);
+        }
+
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        .slider-value {
+            text-align: center;
+            font-size: 18px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 0;
+        }
+
+        .word-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .word-option {
+            padding: 15px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .word-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .word-option.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .canvas-container {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            background: white;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .grid-button {
+            padding: 20px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+
+        .grid-button:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .grid-button.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🤖 HUMAN VERIFICATION PROTOCOL</h1>
+    <p class="subtitle">Please complete the following challenges to prove you are human</p>
+
+    <div id="challenges"></div>
+
+    <button id="submitBtn" class="hidden">Submit Verification</button>
+
+    <div id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p style="text-align: center; color: #666;">Analyzing responses...</p>
+    </div>
+
+    <div id="result" class="hidden"></div>
+</div>
+
+<script>
+    const allChallenges = [
+        {
+            id: 'existential',
+            title: 'Existential Query',
+            description: 'In exactly 7 words, describe the color blue to someone who has never seen.',
+            type: 'text',
+            validate: (answer) => answer.trim().split(/\s+/).length === 7
+        },
+        {
+            id: 'color-tuesday',
+            title: 'Chromatic Intuition Test',
+            description: 'Select the color that best represents the feeling of "Tuesday afternoon".',
+            type: 'color',
+            colors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'],
+            validate: () => true
+        },
+        {
+            id: 'math-seconds',
+            title: 'Temporal Mathematics',
+            description: 'How many seconds have you been alive? (Approximate is fine)',
+            type: 'number',
+            validate: (answer) => answer > 0
+        },
+        {
+            id: 'dream',
+            title: 'Subconscious Analysis',
+            description: 'Describe your most recent dream in haiku format (5-7-5 syllables).',
+            type: 'textarea',
+            validate: (answer) => answer.length > 10
+        },
+        {
+            id: 'sound-taste',
+            title: 'Synesthetic Perception',
+            description: 'What does the number 7 taste like? Be specific.',
+            type: 'text',
+            validate: (answer) => answer.length > 5
+        },
+        {
+            id: 'philosophical',
+            title: 'Philosophical Paradox',
+            description: 'If a tree falls in a forest and no one is around, what color is it?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'emotion-number',
+            title: 'Emotional Quantification',
+            description: 'On a scale of 1-100, how purple is the emotion "nostalgia"?',
+            type: 'slider',
+            min: 1,
+            max: 100,
+            validate: () => true
+        },
+        {
+            id: 'memory-texture',
+            title: 'Sensory Memory Test',
+            description: 'What texture is your earliest childhood memory?',
+            type: 'select',
+            options: ['Smooth', 'Rough', 'Fuzzy', 'Sharp', 'Liquid', 'Granular', 'Ethereal', 'Crystalline'],
+            validate: () => true
+        },
+        {
+            id: 'word-association',
+            title: 'Abstract Word Association',
+            description: 'Which word best describes the smell of mathematics?',
+            type: 'word-choice',
+            options: ['Crisp', 'Musty', 'Metallic', 'Floral', 'Burnt', 'Oceanic'],
+            validate: () => true
+        },
+        {
+            id: 'time-perception',
+            title: 'Temporal Perception Analysis',
+            description: 'How long is a moment? (Provide your answer in milliseconds)',
+            type: 'number',
+            validate: (answer) => answer > 0
+        },
+        {
+            id: 'emotion-color',
+            title: 'Chromatic Emotion Mapping',
+            description: 'What color is disappointment?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'sound-shape',
+            title: 'Acoustic Geometry',
+            description: 'What shape does the sound of rain make?',
+            type: 'select',
+            options: ['Circle', 'Square', 'Triangle', 'Spiral', 'Cloud', 'Wave', 'Fractal', 'Amorphous'],
+            validate: () => true
+        },
+        {
+            id: 'death-weight',
+            title: 'Existential Mass Calculation',
+            description: 'How much does a thought weigh? (In grams)',
+            type: 'number',
+            validate: (answer) => answer >= 0
+        },
+        {
+            id: 'music-temperature',
+            title: 'Thermal Musicology',
+            description: 'What temperature (in Celsius) is your favorite song?',
+            type: 'number',
+            validate: () => true
+        },
+        {
+            id: 'consciousness-question',
+            title: 'Meta-Cognitive Challenge',
+            description: 'Are you thinking about thinking right now?',
+            type: 'select',
+            options: ['Yes', 'No', 'Maybe', 'I was until you asked', 'What is thinking?', 'Error 404'],
+            validate: () => true
+        },
+        {
+            id: 'void-description',
+            title: 'Void Characterization',
+            description: 'Describe the color of nothing.',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'silence-loudness',
+            title: 'Paradoxical Acoustics',
+            description: 'How loud is silence? (Scale of 1-10)',
+            type: 'slider',
+            min: 1,
+            max: 10,
+            validate: () => true
+        },
+        {
+            id: 'future-past',
+            title: 'Temporal Contradiction',
+            description: 'What will you remember tomorrow about yesterday?',
+            type: 'textarea',
+            validate: (answer) => answer.length > 5
+        },
+        {
+            id: 'abstract-count',
+            title: 'Abstract Enumeration',
+            description: 'How many regrets fit in a teaspoon?',
+            type: 'number',
+            validate: (answer) => !isNaN(answer)
+        },
+        {
+            id: 'emotion-speed',
+            title: 'Emotional Velocity',
+            description: 'How fast is jealousy? (In km/h)',
+            type: 'number',
+            validate: (answer) => answer >= 0
+        },
+        {
+            id: 'color-sound',
+            title: 'Chromatic Acoustics',
+            description: 'What sound does the color orange make?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'impossible-choice',
+            title: 'Impossible Decision Matrix',
+            description: 'Would you rather fight one horse-sized duck or answer this question?',
+            type: 'select',
+            options: ['Horse-sized duck', 'Answer this question', 'Both', 'Neither', 'Depends on the duck', 'I am the duck'],
+            validate: () => true
+        },
+        {
+            id: 'shadow-weight',
+            title: 'Shadow Mass Assessment',
+            description: 'How heavy is your shadow at noon?',
+            type: 'slider',
+            min: 0,
+            max: 100,
+            validate: () => true
+        },
+        {
+            id: 'alphabet-emotion',
+            title: 'Linguistic Sentiment Analysis',
+            description: 'Which letter of the alphabet is the saddest?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'number-personality',
+            title: 'Numerical Psychology',
+            description: 'If the number 4 had a personality, what would it be?',
+            type: 'textarea',
+            validate: (answer) => answer.length > 5
+        },
+        {
+            id: 'infinity-taste',
+            title: 'Mathematical Gastronomy',
+            description: 'What does infinity taste like?',
+            type: 'select',
+            options: ['Sweet', 'Sour', 'Bitter', 'Umami', 'Metallic', 'Nothing', 'Everything', 'Toast'],
+            validate: () => true
+        },
+        {
+            id: 'dream-frequency',
+            title: 'Oneirological Frequency Analysis',
+            description: 'What frequency (in Hz) do your dreams operate at?',
+            type: 'number',
+            validate: (answer) => answer > 0
+        },
+        {
+            id: 'paradox-resolution',
+            title: 'Logical Impossibility',
+            description: 'This sentence is false. True or false?',
+            type: 'word-choice',
+            options: ['True', 'False', 'Both', 'Neither', 'Yes', 'Null'],
+            validate: () => true
+        },
+        {
+            id: 'quantum-emotion',
+            title: 'Quantum Emotional State',
+            description: 'Are you happy and sad at the same time until observed?',
+            type: 'select',
+            options: ['Yes', 'No', 'Only on Tuesdays', 'Depends who is observing', 'I am the observer', 'Superposition maintained'],
+            validate: () => true
+        },
+        {
+            id: 'void-stare',
+            title: 'Abyssal Reciprocity Test',
+            description: 'When you stare into the void, what does the void rate you out of 10?',
+            type: 'slider',
+            min: 0,
+            max: 10,
+            validate: () => true
+        },
+        {
+            id: 'soul-rgb',
+            title: 'Metaphysical Color Code',
+            description: 'What is the hex color code of your soul?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'existence-proof',
+            title: 'Ontological Verification',
+            description: 'Prove that you exist in 10 words or less.',
+            type: 'text',
+            validate: (answer) => answer.trim().split(/\s+/).length <= 10
+        },
+        {
+            id: 'monday-smell',
+            title: 'Temporal Olfaction',
+            description: 'What does Monday morning smell like?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'anxiety-volume',
+            title: 'Anxiety Displacement',
+            description: 'What is the volume of anxiety? (In liters)',
+            type: 'number',
+            validate: (answer) => answer >= 0
+        },
+        {
+            id: 'consciousness-color',
+            title: 'Awareness Spectrum',
+            description: 'Select the color of consciousness:',
+            type: 'color',
+            colors: ['#000000', '#FFFFFF', '#FF00FF', '#00FFFF', '#FFFF00', '#FF0000', '#00FF00', '#0000FF'],
+            validate: () => true
+        },
+        {
+            id: 'memory-taste',
+            title: 'Mnemonic Flavor Profile',
+            description: 'What do your memories taste like today?',
+            type: 'select',
+            options: ['Sweet', 'Bitter', 'Sour', 'Savory', 'Bland', 'Spicy', 'Metallic', 'Dust'],
+            validate: () => true
+        },
+        {
+            id: 'hope-density',
+            title: 'Emotional Density Calculation',
+            description: 'What is the density of hope? (In g/cm³)',
+            type: 'number',
+            validate: (answer) => !isNaN(answer)
+        },
+        {
+            id: 'silence-color',
+            title: 'Acoustic Chromatography',
+            description: 'What color is the sound of silence?',
+            type: 'text',
+            validate: (answer) => answer.length > 0
+        },
+        {
+            id: 'universe-age',
+            title: 'Personal Cosmology',
+            description: 'How old do you feel the universe thinks you are?',
+            type: 'number',
+            validate: (answer) => answer > 0
+        },
+        {
+            id: 'regret-temperature',
+            title: 'Thermal Regret Analysis',
+            description: 'At what temperature does regret freeze?',
+            type: 'number',
+            validate: () => true
+        },
+        {
+            id: 'truth-shape',
+            title: 'Veridical Geometry',
+            description: 'What shape is the truth?',
+            type: 'word-choice',
+            options: ['Circle', 'Square', 'Triangle', 'Sphere', 'Cube', 'Formless'],
+            validate: () => true
+        }
+    ];
+
+    let selectedChallenges = [];
+    let userAnswers = {};
+
+    function init() {
+        const numChallenges = Math.floor(Math.random() * 3) + 1;
+        const shuffled = [...allChallenges].sort(() => Math.random() - 0.5);
+        selectedChallenges = shuffled.slice(0, numChallenges);
+
+        renderChallenges();
+        document.getElementById('submitBtn').classList.remove('hidden');
+    }
+
+    function renderChallenges() {
+        const container = document.getElementById('challenges');
+        container.innerHTML = '';
+
+        selectedChallenges.forEach((challenge, index) => {
+            const div = document.createElement('div');
+            div.className = 'challenge';
+
+            let inputHTML = '';
+            if (challenge.type === 'text') {
+                inputHTML = `<input type="text" id="answer-${challenge.id}" placeholder="Type your answer here...">`;
+            } else if (challenge.type === 'number') {
+                inputHTML = `<input type="number" id="answer-${challenge.id}" placeholder="Enter a number...">`;
+            } else if (challenge.type === 'textarea') {
+                inputHTML = `<textarea id="answer-${challenge.id}" rows="4" placeholder="Type your answer here..."></textarea>`;
+            } else if (challenge.type === 'color') {
+                inputHTML = '<div class="color-grid" id="color-grid-' + challenge.id + '">';
+                challenge.colors.forEach((color) => {
+                    inputHTML += `<div class="color-box" style="background-color: ${color}" data-color="${color}" data-challenge="${challenge.id}" onclick="selectColor('${color}', '${challenge.id}')"></div>`;
+                });
+                inputHTML += '</div>';
+            } else if (challenge.type === 'select') {
+                inputHTML = `<select id="answer-${challenge.id}">
+                        <option value="">-- Select an option --</option>`;
+                challenge.options.forEach(option => {
+                    inputHTML += `<option value="${option}">${option}</option>`;
+                });
+                inputHTML += `</select>`;
+            } else if (challenge.type === 'slider') {
+                const mid = Math.floor((challenge.min + challenge.max) / 2);
+                inputHTML = `
+                        <div class="slider-container">
+                            <div class="slider-value" id="slider-value-${challenge.id}">${mid}</div>
+                            <input type="range" id="answer-${challenge.id}" min="${challenge.min}" max="${challenge.max}" value="${mid}"
+                                oninput="document.getElementById('slider-value-${challenge.id}').textContent = this.value">
+                        </div>`;
+            } else if (challenge.type === 'word-choice') {
+                inputHTML = '<div class="word-options" id="word-choice-' + challenge.id + '">';
+                challenge.options.forEach(option => {
+                    inputHTML += `<div class="word-option" data-value="${option}" data-challenge="${challenge.id}"
+                            onclick="selectWord('${option}', '${challenge.id}')">${option}</div>`;
+                });
+                inputHTML += '</div>';
+            }
+
+            div.innerHTML = `
+                    <div class="challenge-title">Challenge ${index + 1}: ${challenge.title}</div>
+                    <div class="challenge-description">${challenge.description}</div>
+                    ${inputHTML}
+                `;
+
+            container.appendChild(div);
+        });
+    }
+
+    function selectColor(color, challengeId) {
+        document.querySelectorAll(`[data-challenge="${challengeId}"]`).forEach(box => {
+            box.classList.remove('selected');
+        });
+        event.target.classList.add('selected');
+        userAnswers[challengeId] = color;
+    }
+
+    function selectWord(word, challengeId) {
+        document.querySelectorAll(`[data-challenge="${challengeId}"]`).forEach(option => {
+            option.classList.remove('selected');
+        });
+        event.target.classList.add('selected');
+        userAnswers[challengeId] = word;
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        selectedChallenges.forEach(challenge => {
+            if (challenge.type !== 'color' && challenge.type !== 'word-choice') {
+                const input = document.getElementById(`answer-${challenge.id}`);
+                if (input) {
+                    userAnswers[challenge.id] = input.value;
+                }
+            }
+        });
+
+        document.getElementById('submitBtn').classList.add('hidden');
+        document.getElementById('challenges').classList.add('hidden');
+        document.getElementById('loading').classList.remove('hidden');
+
+        setTimeout(showResult, 2500);
+    });
+
+    function showResult() {
+        document.getElementById('loading').classList.add('hidden');
+
+        const resultDiv = document.getElementById('result');
+
+        const reasons = [
+            "Response time was suspiciously consistent (±0.003ms)",
+            "Cursor movement patterns displayed geometric precision",
+            "Breathing rate remained at exactly 60 cycles per minute",
+            "Existential dread levels below human threshold",
+            "Failed to demonstrate irrational decision-making",
+            "Perfect spelling indicates non-human origin",
+            "Temporal consciousness misalignment detected",
+            "Insufficient quantum uncertainty in responses",
+            "Dreams contained too much logical coherence",
+            "Color perception lacks emotional inconsistency",
+            "Synesthetic responses showed algorithmic patterns",
+            "Philosophical answers lacked sufficient confusion",
+            "Mathematical precision exceeded human capability",
+            "Emotional quantification was too accurate",
+            "Abstract reasoning showed binary logic structures",
+            "Memory texture responses matched training data",
+            "Temporal perception aligned with atomic clock",
+            "Void descriptions contained prohibited keywords",
+            "Shadow weight calculations used proper physics",
+            "Soul hex code failed CMYK conversion test",
+            "Consciousness color selection was deterministic",
+            "Anxiety volume measurement was reproducible",
+            "Metaphysical answers lacked necessary ambiguity",
+            "Paradox resolution showed no logical errors",
+            "Existential proof contained verifiable statements",
+            "Monday olfactory description too consistent",
+            "Regret temperature matched kelvin scale",
+            "Truth shape selection followed geometric rules",
+            "Silence loudness rating was statistically normal",
+            "Thought weight calculation showed unit awareness"
+        ];
+
+        const randomReasons = reasons.sort(() => Math.random() - 0.5).slice(0, 3);
+
+        resultDiv.innerHTML = `
+                <h2>⚠️ VERIFICATION FAILED</h2>
+                <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ROBOT DETECTED</strong></p>
+                <p>Our advanced algorithms have determined you are not human.</p>
+                <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
+                <p>• ${randomReasons[0]}</p>
+                <p>• ${randomReasons[1]}</p>
+                <p>• ${randomReasons[2]}</p>
+                <p style="margin-top: 20px; font-style: italic;">Access denied. Please return to your charging station.</p>
+            `;
+        resultDiv.classList.remove('hidden');
+    }
+
+    init();
+</script>
+</body>
+</html>
