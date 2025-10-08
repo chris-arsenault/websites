@@ -247,12 +247,8 @@
     <div id="result" class="hidden"></div>
 </div>
 <script src="config.js"></script>
-<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1481.0.min.js"></script>
 
 <script type="module">
-    import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
-
-
     const allChallenges = [
         {
             id: 'existential',
@@ -414,70 +410,6 @@
         userAnswers[challengeId] = word;
     };
 
-    // --- Cognito Identity via JSON-RPC (no AWS SDK, no fs) ---
-    async function getCognitoIdentityId({ region, identityPoolId, logins }) {
-        const url = `https://cognito-identity.${region}.amazonaws.com/`;
-        const res = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-amz-json-1.1",
-                "X-Amz-Target": "AWSCognitoIdentityService.GetId"
-            },
-            body: JSON.stringify({
-                IdentityPoolId: identityPoolId,
-                ...(logins ? { Logins: logins } : {})
-            })
-        });
-        if (!res.ok) {
-            throw new Error(`GetId failed: ${res.status} ${await res.text()}`);
-        }
-        const json = await res.json();
-        return json.IdentityId;
-    }
-
-    async function getCognitoCredentials({ region, identityId, logins }) {
-        const url = `https://cognito-identity.${region}.amazonaws.com/`;
-        const res = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-amz-json-1.1",
-                "X-Amz-Target": "AWSCognitoIdentityService.GetCredentialsForIdentity"
-            },
-            body: JSON.stringify({
-                IdentityId: identityId,
-                ...(logins ? { Logins: logins } : {})
-            })
-        });
-        if (!res.ok) {
-            throw new Error(`GetCredentialsForIdentity failed: ${res.status} ${await res.text()}`);
-        }
-        const json = await res.json();
-        const c = json.Credentials; // { AccessKeyId, SecretKey, SessionToken, Expiration }
-        return {
-            accessKeyId: c.AccessKeyId,
-            secretAccessKey: c.SecretKey,
-            sessionToken: c.SessionToken,
-            expiration: new Date(c.Expiration)
-        };
-    }
-
-    async function getBrowserAwsCredentials() {
-        const identityId = await getCognitoIdentityId({
-            region: CONFIG.region,
-            identityPoolId: CONFIG.identityPoolId,
-            logins: CONFIG.logins
-        });
-        console.log("Cognito Identity ID:", identityId);
-
-        const creds = await getCognitoCredentials({
-            region: CONFIG.region,
-            identityId,
-            logins: CONFIG.logins
-        });
-
-        return { identityId, credentials: creds };
-    }
-
     function buildPrompt(challenges, answers) {
         let prompt = "You are analyzing responses to esoteric questions to determine if they were answered by a human or a bot. ";
         prompt += "Respond with ONLY 'YES' if you think this is a human, or 'NO' if you think this is a bot. ";
@@ -493,42 +425,30 @@
         return prompt;
     }
 
-    // --- Bedrock call using aws4fetch (SigV4 in browser, no SDK) ---
     async function callBedrock(prompt) {
-        const { credentials } = await getBrowserAwsCredentials();
-
-        const aws = new AwsClient({
-            accessKeyId: credentials.accessKeyId,
-            secretAccessKey: credentials.secretAccessKey,
-            sessionToken: credentials.sessionToken,
-            region: CONFIG.region,
-            service: "bedrock"
-        });
-
-        const url = `https://bedrock-runtime.${CONFIG.region}.amazonaws.com/model/${encodeURIComponent(CONFIG.bedrockModelId)}/invoke`;
-
-        // Anthropic on Bedrock payload
         const payload = {
-            anthropic_version: "bedrock-2023-05-31",
-            max_tokens: 10,
-            messages: [{ role: "user", content: prompt }]
+            prompt, // or you can send messages: [...]
+            max_tokens: 10
         };
 
-        const res = await aws.fetch(url, {
+        const res = await fetch(CONFIG.invoke_url, {
             method: "POST",
             headers: {
                 "content-type": "application/json",
-                "accept": "application/json"
+                // optional: identify the user for rate limiting
+                "x-user-id": CONFIG.userId || "guest"
             },
             body: JSON.stringify(payload)
         });
 
         if (!res.ok) {
-            throw new Error(`Bedrock error ${res.status}: ${await res.text()}`);
+            throw new Error(`Proxy error ${res.status}: ${await res.text()}`);
         }
 
         const json = await res.json();
-        return (json?.content?.[0]?.text || "").trim().toUpperCase();
+
+        // If you want just the normalized text that the Lambda returns:
+        return (json.text || "").trim().toUpperCase();
     }
 
     document.getElementById('submitBtn').addEventListener('click', async () => {
