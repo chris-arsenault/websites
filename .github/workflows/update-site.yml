@@ -80,10 +80,13 @@ jobs:
       - name: Get Terraform outputs
         run: |
           cd infrastructure/terraform
-          terraform init
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="key=static-websites/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
+            -backend-config="encrypt=true"
           terraform output -json all_sites > sites-config.json
-          echo "📊 Available sites:"
-          cat sites-config.json | jq '.'
 
       - name: Sync and invalidate
         run: |

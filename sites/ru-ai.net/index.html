@@ -100,12 +100,26 @@
             transform: translateY(0);
         }
 
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .result {
-            background: #ff6b6b;
-            color: white;
             padding: 30px;
             border-radius: 10px;
             text-align: center;
+        }
+
+        .result.robot {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .result.human {
+            background: #51cf66;
+            color: white;
         }
 
         .result h2 {
@@ -205,43 +219,13 @@
             border-color: #667eea;
         }
 
-        .canvas-container {
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            background: white;
-        }
-
-        canvas {
-            display: block;
-            cursor: crosshair;
-        }
-
-        .button-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-        }
-
-        .grid-button {
-            padding: 20px;
-            background: white;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            transition: all 0.2s;
-        }
-
-        .grid-button:hover {
-            border-color: #667eea;
-            transform: scale(1.05);
-        }
-
-        .grid-button.selected {
-            background: #667eea;
+        .error {
+            background: #ff6b6b;
             color: white;
-            border-color: #667eea;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
         }
     </style>
 </head>
@@ -250,19 +234,36 @@
     <h1>🤖 HUMAN VERIFICATION PROTOCOL</h1>
     <p class="subtitle">Please complete the following challenges to prove you are human</p>
 
+    <div id="error" class="error hidden"></div>
     <div id="challenges"></div>
 
     <button id="submitBtn" class="hidden">Submit Verification</button>
 
     <div id="loading" class="hidden">
         <div class="spinner"></div>
-        <p style="text-align: center; color: #666;">Analyzing responses...</p>
+        <p style="text-align: center; color: #666;">Analyzing responses with AI...</p>
     </div>
 
     <div id="result" class="hidden"></div>
 </div>
+<script src="config.js"></script>
 
-<script>
+<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-cognito-identity@3.450.0/dist-es/index.js" type="module"></script>
+<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/credential-providers@3.450.0/dist-es/index.js" type="module"></script>
+<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-bedrock-runtime@3.450.0/dist-es/index.js" type="module"></script>
+
+<script type="module">
+    import { CognitoIdentityClient } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-cognito-identity@3.450.0/+esm';
+    import { fromCognitoIdentityPool } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/credential-providers@3.450.0/+esm';
+    import { BedrockRuntimeClient, InvokeModelCommand } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-bedrock-runtime@3.450.0/+esm';
+
+    // Configuration - These will be replaced by Terraform outputs
+    const CONFIG = {
+        region: 'REPLACE_WITH_REGION',
+        identityPoolId: 'REPLACE_WITH_IDENTITY_POOL_ID',
+        bedrockModelId: 'REPLACE_WITH_MODEL_ID'
+    };
+
     const allChallenges = [
         {
             id: 'existential',
@@ -338,238 +339,6 @@
             description: 'How long is a moment? (Provide your answer in milliseconds)',
             type: 'number',
             validate: (answer) => answer > 0
-        },
-        {
-            id: 'emotion-color',
-            title: 'Chromatic Emotion Mapping',
-            description: 'What color is disappointment?',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
-            id: 'sound-shape',
-            title: 'Acoustic Geometry',
-            description: 'What shape does the sound of rain make?',
-            type: 'select',
-            options: ['Circle', 'Square', 'Triangle', 'Spiral', 'Cloud', 'Wave', 'Fractal', 'Amorphous'],
-            validate: () => true
-        },
-        {
-            id: 'death-weight',
-            title: 'Existential Mass Calculation',
-            description: 'How much does a thought weigh? (In grams)',
-            type: 'number',
-            validate: (answer) => answer >= 0
-        },
-        {
-            id: 'music-temperature',
-            title: 'Thermal Musicology',
-            description: 'What temperature (in Celsius) is your favorite song?',
-            type: 'number',
-            validate: () => true
-        },
-        {
-            id: 'consciousness-question',
-            title: 'Meta-Cognitive Challenge',
-            description: 'Are you thinking about thinking right now?',
-            type: 'select',
-            options: ['Yes', 'No', 'Maybe', 'I was until you asked', 'What is thinking?', 'Error 404'],
-            validate: () => true
-        },
-        {
-            id: 'void-description',
-            title: 'Void Characterization',
-            description: 'Describe the color of nothing.',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
-            id: 'silence-loudness',
-            title: 'Paradoxical Acoustics',
-            description: 'How loud is silence? (Scale of 1-10)',
-            type: 'slider',
-            min: 1,
-            max: 10,
-            validate: () => true
-        },
-        {
-            id: 'future-past',
-            title: 'Temporal Contradiction',
-            description: 'What will you remember tomorrow about yesterday?',
-            type: 'textarea',
-            validate: (answer) => answer.length > 5
-        },
-        {
-            id: 'abstract-count',
-            title: 'Abstract Enumeration',
-            description: 'How many regrets fit in a teaspoon?',
-            type: 'number',
-            validate: (answer) => !isNaN(answer)
-        },
-        {
-            id: 'emotion-speed',
-            title: 'Emotional Velocity',
-            description: 'How fast is jealousy? (In km/h)',
-            type: 'number',
-            validate: (answer) => answer >= 0
-        },
-        {
-            id: 'color-sound',
-            title: 'Chromatic Acoustics',
-            description: 'What sound does the color orange make?',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
-            id: 'impossible-choice',
-            title: 'Impossible Decision Matrix',
-            description: 'Would you rather fight one horse-sized duck or answer this question?',
-            type: 'select',
-            options: ['Horse-sized duck', 'Answer this question', 'Both', 'Neither', 'Depends on the duck', 'I am the duck'],
-            validate: () => true
-        },
-        {
-            id: 'shadow-weight',
-            title: 'Shadow Mass Assessment',
-            description: 'How heavy is your shadow at noon?',
-            type: 'slider',
-            min: 0,
-            max: 100,
-            validate: () => true
-        },
-        {
-            id: 'alphabet-emotion',
-            title: 'Linguistic Sentiment Analysis',
-            description: 'Which letter of the alphabet is the saddest?',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
-            id: 'number-personality',
-            title: 'Numerical Psychology',
-            description: 'If the number 4 had a personality, what would it be?',
-            type: 'textarea',
-            validate: (answer) => answer.length > 5
-        },
-        {
-            id: 'infinity-taste',
-            title: 'Mathematical Gastronomy',
-            description: 'What does infinity taste like?',
-            type: 'select',
-            options: ['Sweet', 'Sour', 'Bitter', 'Umami', 'Metallic', 'Nothing', 'Everything', 'Toast'],
-            validate: () => true
-        },
-        {
-            id: 'dream-frequency',
-            title: 'Oneirological Frequency Analysis',
-            description: 'What frequency (in Hz) do your dreams operate at?',
-            type: 'number',
-            validate: (answer) => answer > 0
-        },
-        {
-            id: 'paradox-resolution',
-            title: 'Logical Impossibility',
-            description: 'This sentence is false. True or false?',
-            type: 'word-choice',
-            options: ['True', 'False', 'Both', 'Neither', 'Yes', 'Null'],
-            validate: () => true
-        },
-        {
-            id: 'quantum-emotion',
-            title: 'Quantum Emotional State',
-            description: 'Are you happy and sad at the same time until observed?',
-            type: 'select',
-            options: ['Yes', 'No', 'Only on Tuesdays', 'Depends who is observing', 'I am the observer', 'Superposition maintained'],
-            validate: () => true
-        },
-        {
-            id: 'void-stare',
-            title: 'Abyssal Reciprocity Test',
-            description: 'When you stare into the void, what does the void rate you out of 10?',
-            type: 'slider',
-            min: 0,
-            max: 10,
-            validate: () => true
-        },
-        {
-            id: 'soul-rgb',
-            title: 'Metaphysical Color Code',
-            description: 'What is the hex color code of your soul?',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
-            id: 'existence-proof',
-            title: 'Ontological Verification',
-            description: 'Prove that you exist in 10 words or less.',
-            type: 'text',
-            validate: (answer) => answer.trim().split(/\s+/).length <= 10
-        },
-        {
-            id: 'monday-smell',
-            title: 'Temporal Olfaction',
-            description: 'What does Monday morning smell like?',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
-            id: 'anxiety-volume',
-            title: 'Anxiety Displacement',
-            description: 'What is the volume of anxiety? (In liters)',
-            type: 'number',
-            validate: (answer) => answer >= 0
-        },
-        {
-            id: 'consciousness-color',
-            title: 'Awareness Spectrum',
-            description: 'Select the color of consciousness:',
-            type: 'color',
-            colors: ['#000000', '#FFFFFF', '#FF00FF', '#00FFFF', '#FFFF00', '#FF0000', '#00FF00', '#0000FF'],
-            validate: () => true
-        },
-        {
-            id: 'memory-taste',
-            title: 'Mnemonic Flavor Profile',
-            description: 'What do your memories taste like today?',
-            type: 'select',
-            options: ['Sweet', 'Bitter', 'Sour', 'Savory', 'Bland', 'Spicy', 'Metallic', 'Dust'],
-            validate: () => true
-        },
-        {
-            id: 'hope-density',
-            title: 'Emotional Density Calculation',
-            description: 'What is the density of hope? (In g/cm³)',
-            type: 'number',
-            validate: (answer) => !isNaN(answer)
-        },
-        {
-            id: 'silence-color',
-            title: 'Acoustic Chromatography',
-            description: 'What color is the sound of silence?',
-            type: 'text',
-            validate: (answer) => answer.length > 0
-        },
-        {
-            id: 'universe-age',
-            title: 'Personal Cosmology',
-            description: 'How old do you feel the universe thinks you are?',
-            type: 'number',
-            validate: (answer) => answer > 0
-        },
-        {
-            id: 'regret-temperature',
-            title: 'Thermal Regret Analysis',
-            description: 'At what temperature does regret freeze?',
-            type: 'number',
-            validate: () => true
-        },
-        {
-            id: 'truth-shape',
-            title: 'Veridical Geometry',
-            description: 'What shape is the truth?',
-            type: 'word-choice',
-            options: ['Circle', 'Square', 'Triangle', 'Sphere', 'Cube', 'Formless'],
-            validate: () => true
         }
     ];
 
@@ -640,23 +409,84 @@
         });
     }
 
-    function selectColor(color, challengeId) {
+    window.selectColor = function(color, challengeId) {
         document.querySelectorAll(`[data-challenge="${challengeId}"]`).forEach(box => {
             box.classList.remove('selected');
         });
         event.target.classList.add('selected');
         userAnswers[challengeId] = color;
-    }
+    };
 
-    function selectWord(word, challengeId) {
+    window.selectWord = function(word, challengeId) {
         document.querySelectorAll(`[data-challenge="${challengeId}"]`).forEach(option => {
             option.classList.remove('selected');
         });
         event.target.classList.add('selected');
         userAnswers[challengeId] = word;
+    };
+
+    async function getBedrockCredentials() {
+        const credentials = fromCognitoIdentityPool({
+            clientConfig: { region: CONFIG.region },
+            identityPoolId: CONFIG.identityPoolId
+        });
+        return credentials;
     }
 
-    document.getElementById('submitBtn').addEventListener('click', () => {
+    function buildPrompt(challenges, answers) {
+        let prompt = "You are analyzing responses to esoteric questions to determine if they were answered by a human or a bot. ";
+        prompt += "Respond with ONLY 'YES' if you think this is a human, or 'NO' if you think this is a bot. ";
+        prompt += "Do not provide any explanation, just YES or NO.\n\n";
+        prompt += "Questions and Answers:\n\n";
+
+        challenges.forEach((challenge, index) => {
+            const answer = answers[challenge.id] || 'No answer provided';
+            prompt += `${index + 1}. ${challenge.description}\n`;
+            prompt += `Answer: ${answer}\n\n`;
+        });
+
+        return prompt;
+    }
+
+    async function callBedrock(prompt) {
+        try {
+            const credentials = await getBedrockCredentials();
+
+            const client = new BedrockRuntimeClient({
+                region: CONFIG.region,
+                credentials: credentials
+            });
+
+            const payload = {
+                anthropic_version: "bedrock-2023-05-31",
+                max_tokens: 10,
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt
+                    }
+                ]
+            };
+
+            const command = new InvokeModelCommand({
+                modelId: CONFIG.bedrockModelId,
+                contentType: "application/json",
+                accept: "application/json",
+                body: JSON.stringify(payload)
+            });
+
+            const response = await client.send(command);
+            const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+
+            return responseBody.content[0].text.trim().toUpperCase();
+        } catch (error) {
+            console.error('Bedrock error:', error);
+            throw error;
+        }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+        // Collect answers
         selectedChallenges.forEach(challenge => {
             if (challenge.type !== 'color' && challenge.type !== 'word-choice') {
                 const input = document.getElementById(`answer-${challenge.id}`);
@@ -666,63 +496,84 @@
             }
         });
 
+        // Show loading
         document.getElementById('submitBtn').classList.add('hidden');
         document.getElementById('challenges').classList.add('hidden');
+        document.getElementById('error').classList.add('hidden');
         document.getElementById('loading').classList.remove('hidden');
 
-        setTimeout(showResult, 2500);
+        try {
+            // Build prompt and call Bedrock
+            const prompt = buildPrompt(selectedChallenges, userAnswers);
+            const bedrockResponse = await callBedrock(prompt);
+
+            // Determine if human or robot based on response
+            const isHuman = bedrockResponse.includes('YES');
+
+            setTimeout(() => showResult(isHuman), 1000);
+        } catch (error) {
+            document.getElementById('loading').classList.add('hidden');
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = 'Error: Unable to verify. Please try again. ' + error.message;
+            errorDiv.classList.remove('hidden');
+            document.getElementById('submitBtn').classList.remove('hidden');
+            document.getElementById('challenges').classList.remove('hidden');
+        }
     });
 
-    function showResult() {
+    function showResult(isHuman) {
         document.getElementById('loading').classList.add('hidden');
-
         const resultDiv = document.getElementById('result');
 
-        const reasons = [
-            "Response time was suspiciously consistent (±0.003ms)",
-            "Cursor movement patterns displayed geometric precision",
-            "Breathing rate remained at exactly 60 cycles per minute",
-            "Existential dread levels below human threshold",
-            "Failed to demonstrate irrational decision-making",
-            "Perfect spelling indicates non-human origin",
-            "Temporal consciousness misalignment detected",
-            "Insufficient quantum uncertainty in responses",
-            "Dreams contained too much logical coherence",
-            "Color perception lacks emotional inconsistency",
-            "Synesthetic responses showed algorithmic patterns",
-            "Philosophical answers lacked sufficient confusion",
-            "Mathematical precision exceeded human capability",
-            "Emotional quantification was too accurate",
-            "Abstract reasoning showed binary logic structures",
-            "Memory texture responses matched training data",
-            "Temporal perception aligned with atomic clock",
-            "Void descriptions contained prohibited keywords",
-            "Shadow weight calculations used proper physics",
-            "Soul hex code failed CMYK conversion test",
-            "Consciousness color selection was deterministic",
-            "Anxiety volume measurement was reproducible",
-            "Metaphysical answers lacked necessary ambiguity",
-            "Paradox resolution showed no logical errors",
-            "Existential proof contained verifiable statements",
-            "Monday olfactory description too consistent",
-            "Regret temperature matched kelvin scale",
-            "Truth shape selection followed geometric rules",
-            "Silence loudness rating was statistically normal",
-            "Thought weight calculation showed unit awareness"
-        ];
+        if (isHuman) {
+            const humanResponses = [
+                "Congratulations! Our AI has determined you are genuinely human.",
+                "Well done! Your responses exhibit authentic human characteristics.",
+                "Success! The quantum algorithms confirm your humanity.",
+                "Impressive! You've passed the Turing test with flying colors.",
+                "Verified! Your existential dread levels are perfectly human.",
+                "Confirmed! Only a human could answer with such beautiful chaos.",
+                "Accepted! Your responses show the delightful irrationality of humanity."
+            ];
 
-        const randomReasons = reasons.sort(() => Math.random() - 0.5).slice(0, 3);
+            const response = humanResponses[Math.floor(Math.random() * humanResponses.length)];
 
-        resultDiv.innerHTML = `
-                <h2>⚠️ VERIFICATION FAILED</h2>
-                <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ROBOT DETECTED</strong></p>
-                <p>Our advanced algorithms have determined you are not human.</p>
-                <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
-                <p>• ${randomReasons[0]}</p>
-                <p>• ${randomReasons[1]}</p>
-                <p>• ${randomReasons[2]}</p>
-                <p style="margin-top: 20px; font-style: italic;">Access denied. Please return to your charging station.</p>
-            `;
+            resultDiv.className = 'result human';
+            resultDiv.innerHTML = `
+                    <h2>✅ HUMAN VERIFIED</h2>
+                    <p style="font-size: 20px; margin: 20px 0;"><strong>Status: HUMAN DETECTED</strong></p>
+                    <p>${response}</p>
+                    <p style="margin-top: 20px; font-style: italic;">Welcome, fellow carbon-based life form!</p>
+                `;
+        } else {
+            const robotReasons = [
+                "Response time was suspiciously consistent (±0.003ms)",
+                "Cursor movement patterns displayed geometric precision",
+                "Breathing rate remained at exactly 60 cycles per minute",
+                "Existential dread levels below human threshold",
+                "Failed to demonstrate irrational decision-making",
+                "Perfect spelling indicates non-human origin",
+                "Temporal consciousness misalignment detected",
+                "Insufficient quantum uncertainty in responses",
+                "Dreams contained too much logical coherence",
+                "Color perception lacks emotional inconsistency"
+            ];
+
+            const randomReasons = robotReasons.sort(() => Math.random() - 0.5).slice(0, 3);
+
+            resultDiv.className = 'result robot';
+            resultDiv.innerHTML = `
+                    <h2>⚠️ VERIFICATION FAILED</h2>
+                    <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ROBOT DETECTED</strong></p>
+                    <p>Our AI has determined you are not human.</p>
+                    <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
+                    <p>• ${randomReasons[0]}</p>
+                    <p>• ${randomReasons[1]}</p>
+                    <p>• ${randomReasons[2]}</p>
+                    <p style="margin-top: 20px; font-style: italic;">Access denied. Please return to your charging station.</p>
+                `;
+        }
+
         resultDiv.classList.remove('hidden');
     }
 

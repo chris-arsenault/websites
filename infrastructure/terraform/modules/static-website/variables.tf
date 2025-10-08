@@ -18,3 +18,13 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "bedrock_config" {
+  description = "Bedrock configuration object (optional)"
+  type = object({
+    region         = string
+    identityPoolId = string
+    bedrockModelId = string
+  })
+  default = null
+}
