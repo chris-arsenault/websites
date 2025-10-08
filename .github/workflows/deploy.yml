@@ -240,6 +240,18 @@ jobs:
         run: |
           cd infrastructure/terraform
           terraform apply -auto-approve tfplan
+          
+          # Get all sites information from Terraform outputs
+          SITES_JSON=$(terraform output -json all_sites)
+          echo "sites_json<<EOF" >> $GITHUB_OUTPUT
+          echo "$SITES_JSON" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "📊 Site configurations:"
+          echo "$SITES_JSON" | jq '.'
+          
+          terraform output -json all_sites > sites-config.json
+          cat sites-config.json
 
       - name: Get Terraform Outputs
         id: get-outputs

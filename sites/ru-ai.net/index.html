@@ -248,21 +248,11 @@
 </div>
 <script src="config.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-cognito-identity@3.450.0/dist-es/index.js" type="module"></script>
-<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/credential-providers@3.450.0/dist-es/index.js" type="module"></script>
-<script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-bedrock-runtime@3.450.0/dist-es/index.js" type="module"></script>
-
 <script type="module">
-    import { CognitoIdentityClient } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-cognito-identity@3.450.0/+esm';
-    import { fromCognitoIdentityPool } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/credential-providers@3.450.0/+esm';
-    import { BedrockRuntimeClient, InvokeModelCommand } from 'https://cdn.jsdelivr.net/npm/@aws-sdk/client-bedrock-runtime@3.450.0/+esm';
+    import { CognitoIdentityClient } from 'https://esm.sh/@aws-sdk/client-cognito-identity@3.450.0';
+    import { fromCognitoIdentityPool } from 'https://esm.sh/@aws-sdk/credential-providers@3.450.0';
+    import { BedrockRuntimeClient, InvokeModelCommand } from 'https://esm.sh/@aws-sdk/client-bedrock-runtime@3.450.0';
 
-    // Configuration - These will be replaced by Terraform outputs
-    const CONFIG = {
-        region: 'REPLACE_WITH_REGION',
-        identityPoolId: 'REPLACE_WITH_IDENTITY_POOL_ID',
-        bedrockModelId: 'REPLACE_WITH_MODEL_ID'
-    };
 
     const allChallenges = [
         {
