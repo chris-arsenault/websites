@@ -228,8 +228,7 @@ jobs:
 
       - name: Terraform Init
         run: |
-          cd infrastructure/terraform
-          terraform init \
+          terraform -chdir="infrastructure/terraform" init \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
             -backend-config="key=static-websites/terraform.tfstate" \
             -backend-config="region=${{ env.AWS_REGION }}" \
@@ -240,7 +239,7 @@ jobs:
         run: |
           terraform -chdir="infrastructure/terraform" apply -auto-approve tfplan
           echo "RAW"
-          terraform -chdir="infrastructure/terraform" output -raw all_sites
+          TF_LOG=debug terraform -chdir="infrastructure/terraform" output -raw all_sites
           echo "RAW"
           terraform -chdir="infrastructure/terraform" output -raw cloudfront_distribution_id 
           echo "JSON"
