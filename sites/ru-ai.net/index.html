@@ -792,28 +792,26 @@
         const pools = categoryMessages[chosenCategory] || categoryMessages['existence'];
 
         if (isHuman) {
-            const line = pickRandom(pools.success, 1)[0] || "Verified human.";
-            const reasonHtml = modelReason
-                ? `<p style="margin-top: 10px; font-style: italic;">AI’s take: ${escapeHtml(modelReason)}</p>`
+            const lines = pickRandom(pools.success, Math.min(2, pools.success.length));
+            const reasonItem = modelReason
+                ? `<p>• ${escapeHtml(modelReason)}</p>`
                 : "";
             resultDiv.className = 'result human';
             resultDiv.innerHTML = `
-                    <h2>✅ HUMAN VERIFIED</h2>
                     <p style="font-size: 20px; margin: 20px 0;"><strong>Status: HUMAN DETECTED</strong></p>
-                    <p>${line}</p>
-                    ${reasonHtml}
+                    <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
+                    ${reasonItem}
+                    ${lines.map(l => `<p>• ${l}</p>`).join('')}
                     <p style="margin-top: 20px; font-style: italic;">Welcome, fellow carbon-based life form.</p>
                 `;
         } else {
-            const lines = pickRandom(pools.failure, Math.min(3, pools.failure.length));
+            const lines = pickRandom(pools.failure, Math.min(2, pools.failure.length));
             const reasonItem = modelReason
                 ? `<p>• ${escapeHtml(modelReason)}</p>`
                 : "";
             resultDiv.className = 'result robot';
             resultDiv.innerHTML = `
-                    <h2>⚠️ VERIFICATION FAILED</h2>
                     <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ROBOT DETECTED</strong></p>
-                    <p>Our AI has determined you are not human.</p>
                     <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
                     ${reasonItem}
                     ${lines.map(l => `<p>• ${l}</p>`).join('')}
