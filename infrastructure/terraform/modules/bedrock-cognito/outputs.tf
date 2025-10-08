@@ -36,9 +36,9 @@ output "unauthenticated_role_arn" {
 output "config" {
   description = "Configuration object for frontend use"
   value = {
-    region          = data.aws_region.current.name
-    identityPoolId  = aws_cognito_identity_pool.main.id
-    bedrockModelId  = var.bedrock_model_id
+    region         = data.aws_region.current.name
+    identityPoolId = aws_cognito_identity_pool.main.id
+    bedrockModelId = var.bedrock_model_id
   }
   sensitive = false
 }
