@@ -11,6 +11,10 @@ on:
       - production
   workflow_dispatch:
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 env:
   TF_VERSION: '1.6.0'
   AWS_REGION: 'us-east-1'

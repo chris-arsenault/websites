@@ -41,7 +41,7 @@ jobs:
 
       - name: Terraform Init
         run: |
-          cd infrasturcture/terraform
+          cd infrastructure/terraform
 
           terraform init \
           -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
