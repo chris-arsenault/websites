@@ -240,7 +240,9 @@ jobs:
         run: |
           cd infrastructure/terraform
           terraform apply -auto-approve tfplan
-          
+          echo "RAW"
+          terraform output -raw
+          echo "JSON"
           terraform output -json
           
           # Get all sites information from Terraform outputs
