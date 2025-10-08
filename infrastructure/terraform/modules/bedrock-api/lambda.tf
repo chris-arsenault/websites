@@ -1,7 +1,10 @@
+locals {
+  file_hash = filemd5("${path.module}/lambda_function.py")
+}
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_file = "${path.module}/lambda_function.py"
-  output_path = "${path.module}/lambda_function-${timestamp()}.zip"
+  output_path = "${path.module}/lambda_function-${local.file_hash}.zip"
 }
 
 resource "aws_lambda_function" "bedrock_proxy" {
