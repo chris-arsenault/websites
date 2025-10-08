@@ -17,7 +17,7 @@ resource "aws_lambda_function" "bedrock_proxy" {
     variables = {
       TABLE_NAME            = aws_dynamodb_table.rate_limits.name
       RATE_LIMIT_PER_MINUTE = tostring(var.rate_limit_per_minute)
-      MODEL_ID              = aws_bedrock_inference_profile.llama_profile.arn
+      MODEL_ID              = aws_bedrock_inference_profile.model_instance_profile.arn
       BEDROCK_REGION        = var.aws_region
     }
   }
