@@ -19,8 +19,8 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "Ahara Static Websites"
-      ManagedBy   = "Terraform"
+      Project   = "Ahara Static Websites"
+      ManagedBy = "Terraform"
     }
   }
 }
