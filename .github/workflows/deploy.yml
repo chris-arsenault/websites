@@ -245,6 +245,11 @@ jobs:
         id: get-outputs
         run: |
           cd infrastructure/terraform
+          terraform state pull > /dev/null
+    
+          # Small delay to ensure S3 consistency
+          sleep 2
+          
           # Get all sites information from Terraform outputs
           SITES_JSON=$(terraform output -json all_sites)
           echo "sites_json<<EOF" >> $GITHUB_OUTPUT

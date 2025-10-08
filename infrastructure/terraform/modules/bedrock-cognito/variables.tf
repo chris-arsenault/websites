@@ -8,6 +8,7 @@ variable "bedrock_model_id" {
   description = "Bedrock model ID to use for verification"
   type        = string
   default     = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  #amazon.nova-micro-v1:0
 }
 
 variable "allowed_origins" {
