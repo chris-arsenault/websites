@@ -7,8 +7,10 @@ terraform {
     }
   }
   backend "s3" {
-    region = "us-east-1"
-    key    = "ahara-static-websites.tfstate"
+    region   = "us-east-1"
+    key      = "ahara-static-websites.tfstate"
+    encrypt  = true
+    lockfile = true
   }
 }
 
