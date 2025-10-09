@@ -123,7 +123,7 @@ jobs:
 
   terraform-apply:
     name: Terraform Apply
-    needs: [setup-backend, terraform-plan]
+    needs: [terraform-plan]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
     runs-on: ubuntu-latest
     environment: production
@@ -212,7 +212,7 @@ jobs:
 
   deploy-sites:
     name: Deploy Sites and Invalidate Cache
-    needs: [setup-backend, terraform-apply]
+    needs: [terraform-apply]
     runs-on: ubuntu-latest
 
     steps:
