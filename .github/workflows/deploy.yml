@@ -15,6 +15,10 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
 env:
   TF_VERSION: '1.6.0'
   AWS_REGION: 'us-east-1'
