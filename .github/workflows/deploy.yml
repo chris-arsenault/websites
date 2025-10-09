@@ -22,7 +22,6 @@ env:
 jobs:
   terraform-plan:
     name: Terraform Plan
-    needs: setup-backend
     runs-on: ubuntu-latest
     outputs:
       tfplanExitCode: ${{ steps.tf-plan.outputs.exitcode }}
