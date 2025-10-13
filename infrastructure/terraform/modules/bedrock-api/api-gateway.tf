@@ -1,5 +1,5 @@
 resource "aws_apigatewayv2_api" "http" {
-  name          = "${local.name_prefix}-bedrock-proxy-http"
+  name          = "${local.resource_prefix}-bedrock-proxy-http"
   protocol_type = "HTTP"
 
   cors_configuration {
@@ -9,7 +9,9 @@ resource "aws_apigatewayv2_api" "http" {
     max_age       = 3600
   }
 
-  tags = var.tags
+  tags = merge(local.default_tags, {
+    Name = "${local.resource_prefix}-bedrock-proxy-http"
+  })
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {

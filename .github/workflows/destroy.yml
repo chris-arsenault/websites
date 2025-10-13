@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     if: github.event.inputs.confirm == 'destroy'
+    env:
+      PROJECT_PREFIX: ${{ secrets.PROJECT_PREFIX }}
 
     steps:
       - name: Checkout code
@@ -41,10 +43,15 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
+          terraform init
 
       - name: Get site information
         run: |
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
           echo "📊 Getting current infrastructure..."
           terraform output -json all_sites > sites-to-destroy.json || echo "{}" > sites-to-destroy.json
           cat sites-to-destroy.json
@@ -69,7 +76,10 @@ jobs:
           fi
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+        run: |
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
+          terraform destroy -auto-approve
 
       - name: Notify
         run: echo "🗑️ Infrastructure destroyed successfully"

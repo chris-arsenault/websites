@@ -49,6 +49,8 @@ jobs:
       - name: Terraform Init
         run: |
           cd infrastructure/terraform
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
           terraform init \
             -backend-config bucket=${{ secrets.STATE_BUCKET }} \
             -backend-config region=${{ env.AWS_REGION }}
@@ -66,8 +68,12 @@ jobs:
 
       - name: Terraform Plan
         id: tf-plan
+        env:
+          PROJECT_PREFIX: ${{ secrets.PROJECT_PREFIX }}
         run: |
           cd infrastructure/terraform
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
           export exitcode=0
           terraform plan -detailed-exitcode -no-color -out=tfplan || export exitcode=$?
           
@@ -131,6 +137,8 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
     runs-on: ubuntu-latest
     environment: production
+    env:
+      PROJECT_PREFIX: ${{ secrets.PROJECT_PREFIX }}
     outputs:
       sites_json: ${{ steps.get-outputs.outputs.sites_json }}
 
@@ -160,6 +168,8 @@ jobs:
       - name: Terraform Init
         run: |
           cd infrastructure/terraform
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
           terraform init \
             -backend-config bucket=${{ secrets.STATE_BUCKET }} \
             -backend-config region=${{ env.AWS_REGION }}
@@ -167,6 +177,8 @@ jobs:
       - name: Terraform Apply
         run: |
           cd infrastructure/terraform
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
           
           terraform apply -auto-approve tfplan
           
@@ -186,6 +198,8 @@ jobs:
         id: get-outputs
         run: |
           cd infrastructure/terraform
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
           terraform state pull > /dev/null
     
           # Small delay to ensure S3 consistency
@@ -203,6 +217,8 @@ jobs:
       - name: Save outputs to artifact
         run: |
           cd infrastructure/terraform
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          export TF_VAR_project_prefix="$PREFIX"
           terraform output -json all_sites > sites-config.json
           cat sites-config.json
 

@@ -64,8 +64,8 @@ resource "aws_cloudfront_distribution" "website" {
     response_page_path = "/index.html"
   }
 
-  tags = merge(var.tags, {
-    Name = local.resource_prefix
+  tags = merge(local.default_tags, {
+    Name = "${local.resource_prefix}-cloudfront"
   })
 
   depends_on = [aws_acm_certificate_validation.website]

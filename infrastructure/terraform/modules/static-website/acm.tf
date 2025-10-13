@@ -7,8 +7,8 @@ resource "aws_acm_certificate" "website" {
     create_before_destroy = true
   }
 
-  tags = merge(var.tags, {
-    Name = local.resource_prefix
+  tags = merge(local.default_tags, {
+    Name = "${local.resource_prefix}-certificate"
   })
 }
 

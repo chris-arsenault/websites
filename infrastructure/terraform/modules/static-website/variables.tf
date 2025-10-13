@@ -19,6 +19,22 @@ variable "tags" {
   default     = {}
 }
 
+variable "project_prefix" {
+  description = "Shared prefix applied to all resource names (e.g., websites)"
+  type        = string
+  default     = "websites"
+}
+
+variable "bedrock_config" {
+  description = "Bedrock configuration object (optional)"
+  type = object({
+    region         = string
+    identityPoolId = string
+    bedrockModelId = string
+  })
+  default = null
+}
+
 variable "invoke_url" {
   description = "URL of the POST endpoint to hit bedrock"
   type        = string
@@ -26,7 +42,7 @@ variable "invoke_url" {
 }
 
 variable "site_name" {
-  description = "Short site identifier (module will ensure a websites- prefix for resource naming); leave blank to derive from hostname"
+  description = "Short site identifier; leave blank to derive from hostname"
   type        = string
   default     = ""
 }
