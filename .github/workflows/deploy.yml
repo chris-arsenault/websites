@@ -4,11 +4,12 @@ on:
   push:
     branches:
       - main
-      - production
+    paths:
+      - 'infrastructure/**'
   pull_request:
     branches:
       - main
-      - production
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -24,11 +25,9 @@ env:
   AWS_REGION: 'us-east-1'
 
 jobs:
-  terraform-plan:
-    name: Terraform Plan
+  terraform:
+    name: Terraform
     runs-on: ubuntu-latest
-    outputs:
-      tfplanExitCode: ${{ steps.tf-plan.outputs.exitcode }}
 
     steps:
       - name: Checkout code
@@ -47,6 +46,8 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
+        env:
+          TF_CLI_ARGS: -no-color
         run: |
           cd infrastructure/terraform
           terraform init \
@@ -54,12 +55,16 @@ jobs:
             -backend-config region=${{ env.AWS_REGION }}
 
       - name: Terraform Format Check
+        env:
+          TF_CLI_ARGS: -no-color
         run: |
           cd infrastructure/terraform
           terraform fmt -check -recursive
         continue-on-error: true
 
       - name: Terraform Validate
+        env:
+          TF_CLI_ARGS: -no-color
         run: |
           cd infrastructure/terraform
           terraform validate
@@ -67,179 +72,27 @@ jobs:
       - name: Terraform Plan
         id: tf-plan
         env:
+          TF_CLI_ARGS: -no-color
           TF_VAR_project_prefix: ${{ secrets.PROJECT_PREFIX }}
         run: |
           cd infrastructure/terraform
-          export exitcode=0
-          terraform plan -detailed-exitcode -no-color -out=tfplan || export exitcode=$?
-          
-          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-          
-          if [ $exitcode -eq 1 ]; then
-            echo "Terraform Plan Failed!"
-            exit 1
-          else 
-            exit 0
-          fi
-
-      - name: Publish Terraform Plan
-        uses: actions/github-script@v8
-        if: github.event_name == 'pull_request'
-        env:
-          PLAN: "terraform\n${{ steps.tf-plan.outputs.stdout }}"
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.tf-fmt.outcome }}\`
-            #### Terraform Initialization ⚙️\`${{ steps.tf-init.outcome }}\`
-            #### Terraform Validation 🤖\`${{ steps.tf-validate.outcome }}\`
-            <details><summary>Validation Output</summary>
-
-            \`\`\`\n
-            ${{ steps.tf-validate.outputs.stdout }}
-            \`\`\`
-
-            </details>
-
-            #### Terraform Plan 📖\`${{ steps.tf-plan.outcome }}\`
-            
-            <details><summary>Show Plan</summary>
-            
-            \`\`\`\n
-            ${process.env.PLAN}
-            \`\`\`
-            
-            </details>
-            
-            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-
-      - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan
-          path: infrastructure/terraform/tfplan
-          retention-days: 5
-
-  terraform-apply:
-    name: Terraform Apply
-    needs: [terraform-plan]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
-    runs-on: ubuntu-latest
-    environment: production
-    outputs:
-      sites_json: ${{ steps.get-outputs.outputs.sites_json }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-          terraform_wrapper: false
-
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v5
-        with:
-          role-to-assume: ${{ secrets.OIDC_ROLE }}
-          role-session-name: GitHubActions-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Download Terraform Plan
-        uses: actions/download-artifact@v5
-        with:
-          name: tfplan
-          path: infrastructure/terraform
-
-      - name: Terraform Init
-        run: |
-          cd infrastructure/terraform
-          terraform init \
-            -backend-config bucket=${{ secrets.STATE_BUCKET }} \
-            -backend-config region=${{ env.AWS_REGION }}
+          terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        env:
+          TF_CLI_ARGS: -no-color
         run: |
           cd infrastructure/terraform
           
           terraform apply -auto-approve tfplan
           
           # Get all sites information from Terraform outputs
-          SITES_JSON=$(terraform output -json all_sites)
-          echo "sites_json<<EOF" >> $GITHUB_OUTPUT
-          echo "$SITES_JSON" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-          echo "📊 Site configurations:"
-          echo "$SITES_JSON" | jq '.'
-          
           terraform output -json all_sites > sites-config.json
           cat sites-config.json
-
-      - name: Get Terraform Outputs
-        id: get-outputs
-        run: |
-          cd infrastructure/terraform
-          terraform state pull > /dev/null
-    
-          # Small delay to ensure S3 consistency
-          sleep 2
-          
-          # Get all sites information from Terraform outputs
-          SITES_JSON=$(terraform output -json all_sites)
-          echo "sites_json<<EOF" >> $GITHUB_OUTPUT
-          echo "$SITES_JSON" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-          echo "📊 Site configurations:"
-          echo "$SITES_JSON" | jq '.'
-
-      - name: Save outputs to artifact
-        run: |
-          cd infrastructure/terraform
-          terraform output -json all_sites > sites-config.json
-          cat sites-config.json
-
-      - name: Upload sites configuration
-        uses: actions/upload-artifact@v4
-        with:
-          name: sites-config
-          path: infrastructure/terraform/sites-config.json
-          retention-days: 5
-
-  deploy-sites:
-    name: Deploy Sites and Invalidate Cache
-    needs: [terraform-apply]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v5
-        with:
-          role-to-assume: ${{ secrets.OIDC_ROLE }}
-          role-session-name: GitHubActions-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Download sites configuration
-        uses: actions/download-artifact@v5
-        with:
-          name: sites-config
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Deploy all sites
+        if: github.ref == 'refs/heads/main'
         run: |
           # Read the sites configuration
           SITES_JSON=$(cat sites-config.json)
@@ -299,6 +152,7 @@ jobs:
           echo "================================================"
 
       - name: Wait for invalidations
+        if: github.ref == 'refs/heads/main'
         run: |
           SITES_JSON=$(cat sites-config.json)
           SITE_NAMES=$(echo "$SITES_JSON" | jq -r 'keys[]')
