@@ -66,6 +66,8 @@ jobs:
 
       - name: Terraform Plan
         id: tf-plan
+        env:
+          TF_VAR_project_prefix: ${{ secrets.PROJECT_PREFIX }}
         run: |
           cd infrastructure/terraform
           export exitcode=0
@@ -325,34 +327,3 @@ jobs:
           done
           
           echo "🎉 All invalidations completed!"
-#
-#  notify:
-#    name: Notify Deployment Status
-#    needs: [terraform-apply, deploy-sites]
-#    if: always()
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Download sites configuration
-#        if: needs.terraform-apply.result == 'success'
-#        uses: actions/download-artifact@v5
-#        with:
-#          name: sites-config
-#        continue-on-error: true
-#
-#      - name: Deployment Success Summary
-#        if: needs.deploy-sites.result == 'success'
-#        run: |
-#          echo "🎉 Deployment completed successfully!"
-#          echo ""
-#          echo "Deployed sites:"
-#
-#          if [ -f sites-config.json ]; then
-#            cat sites-config.json | jq -r 'to_entries[] | "  • \(.value.hostname) - \(.value.url)"'
-#          fi
-#
-#      - name: Deployment Failed
-#        if: needs.deploy-sites.result == 'failure' || needs.terraform-apply.result == 'failure'
-#        run: |
-#          echo "❌ Deployment failed!"
-#          exit 1

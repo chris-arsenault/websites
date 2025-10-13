@@ -1,6 +1,12 @@
-variable "project_name" {
-  description = "Name of the project (used for resource naming)"
+variable "site_name" {
+  description = "Short site identifier used to compose resource names"
   type        = string
+}
+
+variable "project_prefix" {
+  description = "Shared prefix applied to all resource names (e.g., websites)"
+  type        = string
+  default     = "websites"
 }
 
 variable "aws_region" {

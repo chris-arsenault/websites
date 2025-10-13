@@ -1,6 +1,6 @@
 # CloudFront Origin Access Control
 resource "aws_cloudfront_origin_access_control" "website" {
-  name                              = "${var.hostname}-oac"
+  name                              = "${local.resource_prefix}-oac"
   description                       = "OAC for ${var.hostname}"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
@@ -17,14 +17,14 @@ resource "aws_cloudfront_distribution" "website" {
 
   origin {
     domain_name              = aws_s3_bucket.website.bucket_regional_domain_name
-    origin_id                = "S3-${var.hostname}"
+    origin_id                = "S3-${local.resource_prefix}"
     origin_access_control_id = aws_cloudfront_origin_access_control.website.id
   }
 
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-${var.hostname}"
+    target_origin_id       = "S3-${local.resource_prefix}"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
@@ -64,8 +64,8 @@ resource "aws_cloudfront_distribution" "website" {
     response_page_path = "/index.html"
   }
 
-  tags = merge(var.tags, {
-    Name = var.hostname
+  tags = merge(local.default_tags, {
+    Name = "${local.resource_prefix}-cloudfront"
   })
 
   depends_on = [aws_acm_certificate_validation.website]

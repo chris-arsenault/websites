@@ -1,9 +1,9 @@
 # S3 bucket for website content
 resource "aws_s3_bucket" "website" {
-  bucket = var.hostname
+  bucket = local.bucket_name
 
-  tags = merge(var.tags, {
-    Name = var.hostname
+  tags = merge(local.default_tags, {
+    Name = "${local.resource_prefix}-bucket"
   })
 }
 
@@ -34,7 +34,9 @@ resource "aws_s3_object" "index" {
   etag         = filemd5(var.index_html_path)
   content_type = "text/html"
 
-  tags = var.tags
+  tags = merge(local.default_tags, {
+    Name = "${local.resource_prefix}-index"
+  })
 }
 
 # S3 bucket policy to allow CloudFront access
@@ -81,5 +83,7 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 EOT
 
-tags = var.tags
+tags = merge(local.default_tags, {
+  Name = "${local.resource_prefix}-config"
+})
 }
