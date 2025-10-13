@@ -152,6 +152,7 @@ jobs:
           echo "================================================"
 
       - name: Wait for invalidations
+        if: github.ref == 'refs/heads/main'
         run: |
           SITES_JSON=$(cat sites-config.json)
           SITE_NAMES=$(echo "$SITES_JSON" | jq -r 'keys[]')
