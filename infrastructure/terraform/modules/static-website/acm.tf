@@ -8,7 +8,7 @@ resource "aws_acm_certificate" "website" {
   }
 
   tags = merge(var.tags, {
-    Name = var.hostname
+    Name = local.resource_prefix
   })
 }
 

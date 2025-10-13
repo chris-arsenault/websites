@@ -19,6 +19,7 @@ module "ru-ai" {
   hostname        = "ru-ai.net"
   domain_name     = "ru-ai.net"
   index_html_path = "${path.module}/../../sites/ru-ai.net/index.html"
+  site_name       = "ru-ai"
 
   invoke_url = module.bedrock.invoke_url
 

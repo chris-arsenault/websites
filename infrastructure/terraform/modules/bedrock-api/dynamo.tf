@@ -1,6 +1,6 @@
 # 1) DynamoDB table for rate limiting (fixed 1-minute window keys)
 resource "aws_dynamodb_table" "rate_limits" {
-  name         = "${var.project_name}-rate-limit"
+  name         = "${local.name_prefix}-rate-limit"
   billing_mode = "PAY_PER_REQUEST"
 
   hash_key = "pk"

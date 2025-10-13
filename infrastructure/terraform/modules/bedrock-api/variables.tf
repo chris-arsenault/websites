@@ -1,5 +1,5 @@
 variable "project_name" {
-  description = "Name of the project (used for resource naming)"
+  description = "Short project/site name (module will ensure a websites- prefix for resource naming)"
   type        = string
 }
 

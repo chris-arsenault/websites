@@ -9,7 +9,7 @@ data "archive_file" "lambda_zip" {
 }
 
 resource "aws_lambda_function" "bedrock_proxy" {
-  function_name = "${var.project_name}-bedrock-proxy"
+  function_name = "${local.name_prefix}-bedrock-proxy"
   role          = aws_iam_role.lambda_role.arn
   filename      = data.archive_file.lambda_zip.output_path
   handler       = "lambda_function.handler"

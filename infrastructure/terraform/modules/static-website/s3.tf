@@ -1,9 +1,9 @@
 # S3 bucket for website content
 resource "aws_s3_bucket" "website" {
-  bucket = var.hostname
+  bucket = local.bucket_name
 
   tags = merge(var.tags, {
-    Name = var.hostname
+    Name = local.resource_prefix
   })
 }
 

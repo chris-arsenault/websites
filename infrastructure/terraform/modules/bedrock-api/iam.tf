@@ -10,7 +10,7 @@ data "aws_iam_policy_document" "lambda_assume" {
 }
 
 resource "aws_iam_role" "lambda_role" {
-  name               = "${var.project_name}-bedrock-proxy-lambda-role"
+  name               = "${local.name_prefix}-bedrock-proxy-lambda-role"
   assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 
 
@@ -54,7 +54,7 @@ data "aws_iam_policy_document" "lambda_inline" {
 
 
 resource "aws_iam_policy" "lambda_policy" {
-  name   = "${var.project_name}-bedrock-proxy-lambda-policy"
+  name   = "${local.name_prefix}-bedrock-proxy-lambda-policy"
   policy = data.aws_iam_policy_document.lambda_inline.json
 
   tags = var.tags
