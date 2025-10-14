@@ -3,7 +3,7 @@ variable "site_name" {
   type        = string
 }
 
-variable "project_prefix" {
+variable "prefix" {
   description = "Shared prefix applied to all resource names (e.g., websites)"
   type        = string
   default     = "websites"
@@ -30,4 +30,10 @@ variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
   default     = {}
+}
+
+variable "permissions_boundary_arn" {
+  description = "Optional IAM permissions boundary ARN to apply to created roles"
+  type        = string
+  default     = ""
 }

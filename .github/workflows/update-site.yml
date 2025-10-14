@@ -65,6 +65,9 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
+    env:
+      PROJECT_PREFIX: ${{ secrets.PROJECT_PREFIX }}
+      PB_ARN: ${{ secrets.PB_ARN }}
 
     steps:
       - name: Checkout code
@@ -86,6 +89,10 @@ jobs:
       - name: Get Terraform outputs
         run: |
           cd infrastructure/terraform
+          PREFIX="${PROJECT_PREFIX:-websites}"
+          PB="${PB_ARN:-}"
+          export TF_VAR_project_prefix="$PREFIX"
+          export TF_VAR_permissions_boundary_arn="$PB"
           terraform init \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
             -backend-config="region=${{ env.AWS_REGION }}" \

@@ -28,6 +28,9 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
+    env:
+      PROJECT_PREFIX: ${{ secrets.PROJECT_PREFIX }}
+      PB_ARN: ${{ secrets.PB_ARN }}
 
     steps:
       - name: Checkout code
@@ -73,18 +76,18 @@ jobs:
         id: tf-plan
         env:
           TF_CLI_ARGS: -no-color
-          TF_VAR_project_prefix: ${{ secrets.PROJECT_PREFIX }}
+          TF_VAR_prefix: ${{ secrets.PREFIX }}
+          TF_VAR_permissions_boundary_arn: ${{ secrets.PB_ARN }}
         run: |
           cd infrastructure/terraform
           terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
+        # if: github.ref == 'refs/heads/main'
         env:
           TF_CLI_ARGS: -no-color
         run: |
           cd infrastructure/terraform
-          
           terraform apply -auto-approve tfplan
           
           # Get all sites information from Terraform outputs

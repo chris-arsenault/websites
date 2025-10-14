@@ -1,10 +1,11 @@
 module "bedrock" {
   source = "./modules/bedrock-api"
 
-  site_name        = "ru-ai"
-  project_prefix   = var.project_prefix
-  bedrock_model_id = "anthropic.claude-3-haiku-20240307-v1:0"
-  aws_region       = "us-east-1"
+  site_name                = "ru-ai"
+  prefix                   = var.prefix
+  permissions_boundary_arn = var.permissions_boundary_arn
+  bedrock_model_id         = "anthropic.claude-3-haiku-20240307-v1:0"
+  aws_region               = "us-east-1"
 
   tags = {
     Website = "ru-ai.net"
@@ -21,7 +22,7 @@ module "ru-ai" {
   domain_name     = "ru-ai.net"
   index_html_path = "${path.module}/../../sites/ru-ai.net/index.html"
   site_name       = "ru-ai"
-  project_prefix  = var.project_prefix
+  prefix          = var.prefix
 
   invoke_url = module.bedrock.invoke_url
 
