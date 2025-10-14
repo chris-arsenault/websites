@@ -1,5 +1,5 @@
 locals {
-  normalized_prefix = trimspace(var.project_prefix)
+  normalized_prefix = trimspace(var.prefix)
   derived_site_name = element(split(".", var.hostname), 0)
   configured_site   = trimspace(var.site_name)
   site_name         = local.configured_site != "" ? local.configured_site : local.derived_site_name

@@ -10,9 +10,9 @@ data "aws_iam_policy_document" "lambda_assume" {
 }
 
 resource "aws_iam_role" "lambda_role" {
-  name               = "${local.resource_prefix}-bedrock-proxy-lambda-role"
-  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
-
+  name                 = "${local.resource_prefix}-bedrock-proxy-lambda-role"
+  assume_role_policy   = data.aws_iam_policy_document.lambda_assume.json
+  permissions_boundary = var.permissions_boundary_arn != "" ? var.permissions_boundary_arn : null
 
   tags = merge(local.default_tags, {
     Name = "${local.resource_prefix}-bedrock-proxy-lambda-role"

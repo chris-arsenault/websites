@@ -28,7 +28,6 @@ jobs:
   terraform:
     name: Terraform
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -73,7 +72,8 @@ jobs:
         id: tf-plan
         env:
           TF_CLI_ARGS: -no-color
-          TF_VAR_project_prefix: ${{ secrets.PROJECT_PREFIX }}
+          TF_VAR_prefix: ${{ secrets.PREFIX }}
+          TF_VAR_permissions_boundary_arn: ${{ secrets.PB_ARN }}
         run: |
           cd infrastructure/terraform
           terraform plan -input=false -out=tfplan
@@ -84,7 +84,6 @@ jobs:
           TF_CLI_ARGS: -no-color
         run: |
           cd infrastructure/terraform
-          
           terraform apply -auto-approve tfplan
           
           # Get all sites information from Terraform outputs
