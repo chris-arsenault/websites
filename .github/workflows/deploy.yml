@@ -29,10 +29,6 @@ jobs:
     name: Terraform
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: infrastructure/terraform
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -53,6 +49,7 @@ jobs:
         env:
           TF_CLI_ARGS: -no-color
         run: |
+          cd infrastructure/terraform
           terraform init \
             -backend-config bucket=${{ secrets.STATE_BUCKET }} \
             -backend-config region=${{ env.AWS_REGION }}
@@ -61,6 +58,7 @@ jobs:
         env:
           TF_CLI_ARGS: -no-color
         run: |
+          cd infrastructure/terraform
           terraform fmt -check -recursive
         continue-on-error: true
 
@@ -68,6 +66,7 @@ jobs:
         env:
           TF_CLI_ARGS: -no-color
         run: |
+          cd infrastructure/terraform
           terraform validate
 
       - name: Terraform Plan
@@ -77,6 +76,7 @@ jobs:
           TF_VAR_prefix: ${{ secrets.PREFIX }}
           TF_VAR_permissions_boundary_arn: ${{ secrets.PB_ARN }}
         run: |
+          cd infrastructure/terraform
           terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
@@ -85,11 +85,15 @@ jobs:
         env:
           TF_CLI_ARGS: -no-color
         run: |
+          cd infrastructure/terraform
           terraform apply -auto-approve tfplan
           
           # Get all sites information from Terraform outputs
           terraform output -json all_sites > sites-config.json
-          cat sites-config.json
+          
+          # move to root for deploy all sites
+          mv sites-config.json ../..
+          cat ../../sites-config.json
 
       - name: Deploy all sites
         if: github.ref == 'refs/heads/main'
