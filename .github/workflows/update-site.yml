@@ -79,25 +79,21 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          role-session-name: GitHubActions-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get Terraform outputs
+      - name: Terraform Init
+        env:
+          TF_CLI_ARGS: -no-color
         run: |
           cd infrastructure/terraform
-          PREFIX="${PROJECT_PREFIX:-websites}"
-          PB="${PB_ARN:-}"
-          export TF_VAR_project_prefix="$PREFIX"
-          export TF_VAR_permissions_boundary_arn="$PB"
           terraform init \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ env.TF_STATE_DYNAMODB_TABLE }}" \
-            -backend-config="encrypt=true"
+            -backend-config bucket=${{ secrets.STATE_BUCKET }} \
+            -backend-config region=${{ env.AWS_REGION }}
           terraform output -json all_sites > sites-config.json
 
       - name: Sync and invalidate
