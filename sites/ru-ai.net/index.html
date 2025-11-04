@@ -227,10 +227,123 @@
             margin-bottom: 20px;
             text-align: center;
         }
+
+        .mode-toggle {
+            width: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        .cat-challenge {
+            text-align: center;
+        }
+
+        .cat-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .cat-option {
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            color: #333;
+            border: none;
+            border-radius: 15px;
+            padding: 25px 15px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .cat-option:active {
+            transform: scale(0.95);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .cat-option.selected {
+            transform: scale(0.94);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+            outline: 4px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .cat-progress {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #667eea;
+        }
+
+        .cat-complete .challenge-title {
+            margin-bottom: 10px;
+        }
+
+        body.cat-mode .container {
+            max-width: 920px;
+            padding: 60px;
+        }
+
+        body.cat-mode h1 {
+            font-size: 36px;
+        }
+
+        body.cat-mode .subtitle {
+            font-size: 20px;
+            margin-bottom: 40px;
+        }
+
+        body.cat-mode .mode-toggle {
+            font-size: 18px;
+            padding: 14px 26px;
+        }
+
+        body.cat-mode .challenge {
+            padding: 45px;
+        }
+
+        body.cat-mode .challenge-title {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        body.cat-mode .challenge-description {
+            font-size: 22px;
+        }
+
+        body.cat-mode .cat-options {
+            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        body.cat-mode .cat-option {
+            padding: 45px 30px;
+            font-size: 26px;
+            border-radius: 25px;
+        }
+
+        body.cat-mode .cat-progress {
+            font-size: 20px;
+        }
+
+        body.cat-mode #submitBtn {
+            font-size: 24px;
+            padding: 24px 30px;
+        }
+
+        body.cat-mode .cat-complete .challenge-description {
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
+    <button id="toggleModeBtn" class="mode-toggle" type="button">Switch to Cat Mode</button>
     <h1>🤖 HUMAN VERIFICATION PROTOCOL</h1>
     <p class="subtitle">Please complete the following challenges to prove you are human</p>
 
@@ -439,16 +552,113 @@
         }
     ];
 
+    const catChallenges = [
+        {
+            id: 'cat-nap-spot',
+            category: 'cat',
+            title: 'Prime Nap Location',
+            description: 'Where will you curl up right now?',
+            type: 'cat-choice',
+            options: ['Sunny windowsill', 'Fresh laundry pile', 'Laptop keyboard', 'Cardboard fortress'],
+            validate: () => true
+        },
+        {
+            id: 'cat-snack-choice',
+            category: 'cat',
+            title: 'Snack Decision Matrix',
+            description: 'Which treat deserves your paw tap?',
+            type: 'cat-choice',
+            options: ['Crunchy kibble nuggets', 'Wet food feast', 'Mysterious houseplant', 'Forbidden shrimp'],
+            validate: () => true
+        },
+        {
+            id: 'cat-door-strategy',
+            category: 'cat',
+            title: 'Door Philosophy',
+            description: 'The door is closed. What is the correct reaction?',
+            type: 'cat-choice',
+            options: ['Meow until opened', 'Scratch with intent', 'Teleport elsewhere', 'Take a rage nap'],
+            validate: () => true
+        },
+        {
+            id: 'cat-toy-preference',
+            category: 'cat',
+            title: 'Ultimate Toy',
+            description: 'Pick the toy that summons maximum zoomies.',
+            type: 'cat-choice',
+            options: ['Laser dot', 'Crinkle ball', 'Feather wand', 'Loose shoelace'],
+            validate: () => true
+        }
+    ];
+
     let selectedChallenges = [];
     let userAnswers = {};
+    let mode = 'human';
+    let catQuestionIndex = 0;
 
-    function init() {
+    function resetLayout() {
+        userAnswers = {};
+        selectedChallenges = [];
+        catQuestionIndex = 0;
+
+        const resultDiv = document.getElementById('result');
+        resultDiv.className = 'result hidden';
+        resultDiv.innerHTML = '';
+
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = '';
+        errorDiv.classList.add('hidden');
+
+        document.getElementById('loading').classList.add('hidden');
+        const challengesDiv = document.getElementById('challenges');
+        challengesDiv.innerHTML = '';
+        challengesDiv.classList.remove('hidden');
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = false;
+        submitBtn.classList.add('hidden');
+        submitBtn.textContent = 'Submit Verification';
+    }
+
+    function switchMode(nextMode) {
+        mode = nextMode;
+        document.body.classList.toggle('cat-mode', mode === 'cat');
+
+        const toggleBtn = document.getElementById('toggleModeBtn');
+        toggleBtn.textContent = mode === 'human' ? 'Switch to Cat Mode' : 'Switch to Human Mode';
+
+        const subtitle = document.querySelector('.subtitle');
+        subtitle.textContent = mode === 'human'
+            ? 'Please complete the following challenges to prove you are human'
+            : 'Tap each answer with your paw to confirm feline intent';
+
+        resetLayout();
+
+        if (mode === 'human') {
+            prepareHumanChallenges();
+        } else {
+            prepareCatChallenges();
+        }
+    }
+
+    function prepareHumanChallenges() {
         const numChallenges = Math.floor(Math.random() * 3) + 2; // 2–4 (unchanged)
         const shuffled = [...allChallenges].sort(() => Math.random() - 0.5);
         selectedChallenges = shuffled.slice(0, numChallenges);
 
         renderChallenges();
-        document.getElementById('submitBtn').classList.remove('hidden');
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.textContent = 'Submit Verification';
+        submitBtn.classList.remove('hidden');
+    }
+
+    function prepareCatChallenges() {
+        selectedChallenges = [...catChallenges];
+        renderCatQuestion();
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.textContent = 'Submit Paw Print';
     }
 
     function renderChallenges() {
@@ -504,6 +714,73 @@
 
             container.appendChild(div);
         });
+    }
+
+    function renderCatQuestion() {
+        const container = document.getElementById('challenges');
+        container.innerHTML = '';
+
+        const total = selectedChallenges.length;
+
+        if (catQuestionIndex < total) {
+            const challenge = selectedChallenges[catQuestionIndex];
+            const div = document.createElement('div');
+            div.className = 'challenge cat-challenge';
+
+            const optionsMarkup = challenge.options.map(option => `
+                    <button type="button" class="cat-option" data-choice="${option}">${option}</button>
+                `).join('');
+
+            div.innerHTML = `
+                    <div class="challenge-title">Question ${catQuestionIndex + 1}: ${challenge.title}</div>
+                    <div class="challenge-description">${challenge.description}</div>
+                    <div class="cat-options">
+                        ${optionsMarkup}
+                    </div>
+                    <div class="cat-progress">Question ${catQuestionIndex + 1} of ${total}</div>
+                `;
+
+            container.appendChild(div);
+
+            div.querySelectorAll('.cat-option').forEach(button => {
+                button.addEventListener('click', () => {
+                    button.classList.add('selected');
+                    handleCatSelection(challenge.id, button.dataset.choice, button);
+                });
+            });
+        } else {
+            const div = document.createElement('div');
+            div.className = 'challenge cat-challenge cat-complete';
+            div.innerHTML = `
+                    <div class="challenge-title">All questions answered!</div>
+                    <div class="challenge-description">Tap the button below to submit your paw print.</div>
+                `;
+            container.appendChild(div);
+            document.getElementById('submitBtn').classList.remove('hidden');
+        }
+    }
+
+    function handleCatSelection(challengeId, choice, buttonEl) {
+        userAnswers[challengeId] = choice;
+
+        setTimeout(() => {
+            catQuestionIndex += 1;
+            renderCatQuestion();
+        }, 180);
+
+        if (buttonEl) {
+            buttonEl.blur();
+        }
+    }
+
+    function init() {
+        const toggleBtn = document.getElementById('toggleModeBtn');
+        toggleBtn.addEventListener('click', () => {
+            const nextMode = mode === 'human' ? 'cat' : 'human';
+            switchMode(nextMode);
+        });
+
+        switchMode('human');
     }
 
     // expose the original click handlers (unchanged behavior)
@@ -709,6 +986,20 @@
                 "Cosmic nonsense was overfit—robot.",
                 "Dragons counted in binary—non-human."
             ]
+        },
+        cat: {
+            success: [
+                "Paw print entropy matches authentic feline behavior.",
+                "Your snack calculus screams living, breathing cat.",
+                "Whisker instincts detected—genuine house tiger.",
+                "Sunbeam prioritization checks out: confirmed cat."
+            ],
+            failure: [
+                "Algorithmic paw taps detected—synthetic feline.",
+                "No true cat declines a sunbeam.",
+                "Treat logic lacked mischief—robot paws at work.",
+                "Whisker decisions aligned too cleanly with code."
+            ]
         }
     };
 
@@ -724,7 +1015,7 @@
     document.getElementById('submitBtn').addEventListener('click', async () => {
         // Collect answers
         selectedChallenges.forEach(challenge => {
-            if (challenge.type !== 'color' && challenge.type !== 'word-choice') {
+            if (challenge.type !== 'color' && challenge.type !== 'word-choice' && challenge.type !== 'cat-choice') {
                 const input = document.getElementById(`answer-${challenge.id}`);
                 if (input) {
                     userAnswers[challenge.id] = input.value;
