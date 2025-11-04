@@ -251,16 +251,22 @@
 
         .cat-option {
             background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
-            color: #333;
+            color: #ffffff;
             border: none;
-            border-radius: 15px;
-            padding: 25px 15px;
+            border-radius: 18px;
+            padding: 30px 20px;
             font-size: 18px;
             font-weight: bold;
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
             cursor: pointer;
             width: 100%;
             transition: transform 0.15s, box-shadow 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
         }
 
         .cat-option:active {
@@ -317,14 +323,15 @@
         }
 
         body.cat-mode .cat-options {
-            gap: 25px;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 35px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         }
 
         body.cat-mode .cat-option {
-            padding: 45px 30px;
-            font-size: 26px;
-            border-radius: 25px;
+            padding: 55px 40px;
+            font-size: 28px;
+            border-radius: 28px;
+            min-height: 230px;
         }
 
         body.cat-mode .cat-progress {
@@ -338,6 +345,26 @@
 
         body.cat-mode .cat-complete .challenge-description {
             font-size: 24px;
+        }
+
+        .cat-option-emoji {
+            font-size: 40px;
+            line-height: 1;
+        }
+
+        body.cat-mode .cat-option-emoji {
+            font-size: 72px;
+        }
+
+        .cat-option-label {
+            display: block;
+            text-align: center;
+            font-size: 18px;
+            line-height: 1.3;
+        }
+
+        body.cat-mode .cat-option-label {
+            font-size: 26px;
         }
     </style>
 </head>
@@ -552,6 +579,66 @@
         }
     ];
 
+    const catOptionEmojiMap = {
+        'Sunny windowsill': '🌞',
+        'Fresh laundry pile': '🧺',
+        'Laptop keyboard': '💻',
+        'Cardboard fortress': '🏰',
+        'Crunchy kibble nuggets': '🍘',
+        'Wet food feast': '🐟',
+        'Mysterious houseplant': '🌿',
+        'Forbidden shrimp': '🍤',
+        'Meow until opened': '🔊',
+        'Scratch with intent': '🪵',
+        'Teleport elsewhere': '🌀',
+        'Take a rage nap': '😴',
+        'Laser dot': '🔴',
+        'Crinkle ball': '🎾',
+        'Feather wand': '🪶',
+        'Loose shoelace': '👟',
+        'Squirrel insurgent': '🐿️',
+        'Delivery human': '🚚',
+        'Falling leaf': '🍂',
+        'Invisible menace': '👻',
+        'Freshly mopped floor': '🧼',
+        'Favorite rug': '🧶',
+        'Human pillow': '🛏️',
+        'Mystery spot at 3am': '🌙',
+        'Morning windowsill': '🌅',
+        'Noon carpet': '🕛',
+        'Late afternoon stairs': '🪜',
+        'After dark radiator glow': '🔥',
+        'Power sprint circuit': '💨',
+        'Stealth cupboard raid': '🗄️',
+        'Philosophical yowl': '🎤',
+        'Silent void stare': '👁️',
+        'Headbutt salute': '🐱',
+        'Figure-eight leg weave': '♾️',
+        'Dignified ignore': '😑',
+        'Immediate lap occupation': '🛋️',
+        'Claim the interior': '📥',
+        'Sit on the lid': '🧰',
+        'Chew the corners': '🦷',
+        'Shred the packing paper': '🧻',
+        'Dripping faucet': '🚰',
+        'Human glass': '🥛',
+        'Ceramic throne bowl': '🚽',
+        'Mysterious floor puddle': '💧'
+    };
+
+    const catGradientPalettes = [
+        'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
+        'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+        'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+        'linear-gradient(135deg, #96e6a1 0%, #d4fc79 100%)',
+        'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+        'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)',
+        'linear-gradient(135deg, #fddb92 0%, #d1fdff 100%)',
+        'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+        'linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%)'
+    ];
+
     const catChallenges = [
         {
             id: 'cat-nap-spot',
@@ -588,6 +675,69 @@
             type: 'cat-choice',
             options: ['Laser dot', 'Crinkle ball', 'Feather wand', 'Loose shoelace'],
             validate: () => true
+        },
+        {
+            id: 'cat-window-patrol',
+            category: 'cat',
+            title: 'Window Patrol Priority',
+            description: 'What deserves your most focused stare right now?',
+            type: 'cat-choice',
+            options: ['Squirrel insurgent', 'Delivery human', 'Falling leaf', 'Invisible menace'],
+            validate: () => true
+        },
+        {
+            id: 'cat-hairball-strategy',
+            category: 'cat',
+            title: 'Hairball Deployment Plan',
+            description: 'Where will you stage the next surprise hairball?',
+            type: 'cat-choice',
+            options: ['Freshly mopped floor', 'Favorite rug', 'Human pillow', 'Mystery spot at 3am'],
+            validate: () => true
+        },
+        {
+            id: 'cat-sunbeam-schedule',
+            category: 'cat',
+            title: 'Sunbeam Scheduling',
+            description: 'Choose the ideal time slot for prime sun worship.',
+            type: 'cat-choice',
+            options: ['Morning windowsill', 'Noon carpet', 'Late afternoon stairs', 'After dark radiator glow'],
+            validate: () => true
+        },
+        {
+            id: 'cat-midnight-agenda',
+            category: 'cat',
+            title: 'Midnight Agenda',
+            description: 'How will you honor the 2am energy surge?',
+            type: 'cat-choice',
+            options: ['Power sprint circuit', 'Stealth cupboard raid', 'Philosophical yowl', 'Silent void stare'],
+            validate: () => true
+        },
+        {
+            id: 'cat-greeting-protocol',
+            category: 'cat',
+            title: 'Greeting Protocol',
+            description: 'Human returns home. What is the correct reception?',
+            type: 'cat-choice',
+            options: ['Headbutt salute', 'Figure-eight leg weave', 'Dignified ignore', 'Immediate lap occupation'],
+            validate: () => true
+        },
+        {
+            id: 'cat-box-policy',
+            category: 'cat',
+            title: 'Box Interaction Policy',
+            description: 'A new box appears. Declare your strategy.',
+            type: 'cat-choice',
+            options: ['Claim the interior', 'Sit on the lid', 'Chew the corners', 'Shred the packing paper'],
+            validate: () => true
+        },
+        {
+            id: 'cat-hydration-preference',
+            category: 'cat',
+            title: 'Hydration Preference',
+            description: 'Select your most refreshing water source today.',
+            type: 'cat-choice',
+            options: ['Dripping faucet', 'Human glass', 'Ceramic throne bowl', 'Mysterious floor puddle'],
+            validate: () => true
         }
     ];
 
@@ -595,6 +745,14 @@
     let userAnswers = {};
     let mode = 'human';
     let catQuestionIndex = 0;
+
+    function getCatOptionEmoji(option) {
+        return catOptionEmojiMap[option] || '🐾';
+    }
+
+    function getRandomCatGradient() {
+        return catGradientPalettes[Math.floor(Math.random() * catGradientPalettes.length)];
+    }
 
     function resetLayout() {
         userAnswers = {};
@@ -627,6 +785,11 @@
         const toggleBtn = document.getElementById('toggleModeBtn');
         toggleBtn.textContent = mode === 'human' ? 'Switch to Cat Mode' : 'Switch to Human Mode';
 
+        const header = document.querySelector('h1');
+        header.textContent = mode === 'human'
+            ? '🤖 HUMAN VERIFICATION PROTOCOL'
+            : '🐾 FELINE VERIFICATION PROTOCOL';
+
         const subtitle = document.querySelector('.subtitle');
         subtitle.textContent = mode === 'human'
             ? 'Please complete the following challenges to prove you are human'
@@ -654,7 +817,9 @@
     }
 
     function prepareCatChallenges() {
-        selectedChallenges = [...catChallenges];
+        const count = Math.floor(Math.random() * 3) + 2; // 2–4 challenges
+        const shuffled = [...catChallenges].sort(() => Math.random() - 0.5);
+        selectedChallenges = shuffled.slice(0, count);
         renderCatQuestion();
 
         const submitBtn = document.getElementById('submitBtn');
@@ -727,9 +892,16 @@
             const div = document.createElement('div');
             div.className = 'challenge cat-challenge';
 
-            const optionsMarkup = challenge.options.map(option => `
-                    <button type="button" class="cat-option" data-choice="${option}">${option}</button>
-                `).join('');
+            const optionsMarkup = challenge.options.map(option => {
+                const emoji = getCatOptionEmoji(option);
+                const gradient = getRandomCatGradient();
+                return `
+                        <button type="button" class="cat-option" data-choice="${option}" aria-label="${option}" title="${option}" style="background: ${gradient};">
+                            <span class="cat-option-emoji">${emoji}</span>
+                            <span class="cat-option-label">${option}</span>
+                        </button>
+                    `;
+            }).join('');
 
             div.innerHTML = `
                     <div class="challenge-title">Question ${catQuestionIndex + 1}: ${challenge.title}</div>
@@ -1073,6 +1245,7 @@
     function showResult(isHuman, modelReason = "") {
         document.getElementById('loading').classList.add('hidden');
         const resultDiv = document.getElementById('result');
+        const isCatMode = mode === 'cat';
 
         // Determine which categories were used in this session
         const usedCategories = [...new Set(selectedChallenges.map(c => c.category))];
@@ -1089,11 +1262,11 @@
                 : "";
             resultDiv.className = 'result human';
             resultDiv.innerHTML = `
-                    <p style="font-size: 20px; margin: 20px 0;"><strong>Status: HUMAN DETECTED</strong></p>
+                    <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ${isCatMode ? 'FELINE DETECTED' : 'HUMAN DETECTED'}</strong></p>
                     <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
                     ${reasonItem}
                     ${lines.map(l => `<p>• ${l}</p>`).join('')}
-                    <p style="margin-top: 20px; font-style: italic;">Welcome, fellow carbon-based life form.</p>
+                    <p style="margin-top: 20px; font-style: italic;">${isCatMode ? 'Welcome, esteemed whiskered entity.' : 'Welcome, fellow carbon-based life form.'}</p>
                 `;
         } else {
             const lines = pickRandom(pools.failure, Math.min(2, pools.failure.length));
@@ -1102,11 +1275,11 @@
                 : "";
             resultDiv.className = 'result robot';
             resultDiv.innerHTML = `
-                    <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ROBOT DETECTED</strong></p>
+                    <p style="font-size: 20px; margin: 20px 0;"><strong>Status: ${isCatMode ? 'FELINE NOT DETECTED' : 'ROBOT DETECTED'}</strong></p>
                     <p style="margin-top: 20px;"><strong>Evidence:</strong></p>
                     ${reasonItem}
                     ${lines.map(l => `<p>• ${l}</p>`).join('')}
-                    <p style="margin-top: 20px; font-style: italic;">Access denied. Please return to your charging station.</p>
+                    <p style="margin-top: 20px; font-style: italic;">${isCatMode ? 'Access denied. Please return to your scratching post.' : 'Access denied. Please return to your charging station.'}</p>
                 `;
         }
 
