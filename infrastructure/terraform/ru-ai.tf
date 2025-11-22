@@ -18,11 +18,11 @@ module "bedrock" {
 module "ru-ai" {
   source = "./modules/static-website"
 
-  hostname        = "ru-ai.net"
-  domain_name     = "ru-ai.net"
-  index_html_path = "${path.module}/../../sites/ru-ai.net/index.html"
-  site_name       = "ru-ai"
-  prefix          = var.prefix
+  hostname            = "ru-ai.net"
+  domain_name         = "ru-ai.net"
+  site_directory_path = "${path.module}/../../sites/ru-ai.net"
+  site_name           = "ru-ai"
+  prefix              = var.prefix
 
   invoke_url = module.bedrock.invoke_url
 

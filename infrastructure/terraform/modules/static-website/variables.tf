@@ -8,8 +8,8 @@ variable "domain_name" {
   type        = string
 }
 
-variable "index_html_path" {
-  description = "Path to the index.html file to upload"
+variable "site_directory_path" {
+  description = "Path to the directory containing all website files"
   type        = string
 }
 

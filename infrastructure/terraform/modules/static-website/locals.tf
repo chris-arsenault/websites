@@ -12,4 +12,24 @@ locals {
     },
     local.normalized_prefix != "" ? { ProjectPrefix = local.normalized_prefix } : {}
   )
+
+  mime_types = {
+    ".html" = "text/html"
+    ".css"  = "text/css"
+    ".js"   = "application/javascript"
+    ".json" = "application/json"
+    ".svg"  = "image/svg+xml"
+    ".png"  = "image/png"
+    ".jpg"  = "image/jpeg"
+    ".jpeg" = "image/jpeg"
+    ".gif"  = "image/gif"
+    ".ico"  = "image/x-icon"
+    ".xml"  = "application/xml"
+    ".txt"  = "text/plain"
+    ".pdf"  = "application/pdf"
+    ".woff" = "font/woff"
+    ".woff2" = "font/woff2"
+    ".ttf"  = "font/ttf"
+    ".eot"  = "application/vnd.ms-fontobject"
+  }
 }
