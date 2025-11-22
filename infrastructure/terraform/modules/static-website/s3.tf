@@ -26,16 +26,18 @@ resource "aws_s3_bucket_versioning" "website" {
   }
 }
 
-# Upload index.html
-resource "aws_s3_object" "index" {
+# Upload all website files
+resource "aws_s3_object" "website_files" {
+  for_each = fileset(var.site_directory_path, "**")
+
   bucket       = aws_s3_bucket.website.id
-  key          = "index.html"
-  source       = var.index_html_path
-  etag         = filemd5(var.index_html_path)
-  content_type = "text/html"
+  key          = each.value
+  source       = "${var.site_directory_path}/${each.value}"
+  etag         = filemd5("${var.site_directory_path}/${each.value}")
+  content_type = lookup(local.mime_types, regex("\\.[^.]+$", each.value), "application/octet-stream")
 
   tags = merge(local.default_tags, {
-    Name = "${local.resource_prefix}-index"
+    Name = "${local.resource_prefix}-${replace(each.value, "/", "-")}"
   })
 }
 
