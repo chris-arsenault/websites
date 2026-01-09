@@ -1,0 +1,8 @@
+{
+  "name": "websites",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "update-dates": "node apps/ahara.io/scripts/update-dates.mjs"
+  }
+}

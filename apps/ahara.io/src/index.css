@@ -52,6 +52,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root {
+  min-height: 100vh;
+}
+
 a {
   color: var(--accent-secondary);
   text-decoration: none;
@@ -70,7 +74,6 @@ button {
 
 img {
   max-width: 100%;
-  height: auto;
 }
 
 ul {
