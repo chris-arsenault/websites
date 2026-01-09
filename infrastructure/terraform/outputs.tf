@@ -9,7 +9,7 @@ output "all_sites" {
       cloudfront_domain = module.ahara_site.cloudfront_domain_name
       site_name         = module.ahara_site.site_name
       domain_name       = module.ahara_site.domain_name
-      local_path        = "apps/ahara.io/static"
+      local_path        = "apps/ahara.io/dist"
     }
     "ru-ai.net" = {
       url               = module.ru_ai_site.website_url
@@ -30,16 +30,6 @@ output "all_sites" {
       site_name         = module.hotsauce_site.site_name
       domain_name       = module.hotsauce_site.domain_name
       local_path        = "apps/hotsauce/frontend/dist"
-    }
-    "ahara.io" = {
-      url               = module.ahara.website_url
-      hostname          = module.ahara.hostname
-      s3_bucket         = module.ahara.s3_bucket_name
-      cloudfront_id     = module.ahara.cloudfront_distribution_id
-      cloudfront_domain = module.ahara.cloudfront_domain_name
-      site_name         = module.ahara.site_name
-      domain_name       = module.ahara.domain_name
-      local_path        = "sites/ahara.io/dist"
     }
   }
 }
