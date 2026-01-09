@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'infrastructure/**'
+      - 'apps/**'
   pull_request:
     branches:
       - main
@@ -21,7 +22,7 @@ permissions:
   contents: read
 
 env:
-  TF_VERSION: '1.6.0'
+  TF_VERSION: '1.14.0'
   AWS_REGION: 'us-east-1'
 
 jobs:
@@ -37,6 +38,18 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Build hotsauce backend
+        run: |
+          cd apps/hotsauce/backend
+          npm ci
+          npm run build
+
+      - name: Build hotsauce frontend
+        run: |
+          cd apps/hotsauce/frontend
+          npm ci
+          npm run build
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v5
@@ -73,7 +86,6 @@ jobs:
         id: tf-plan
         env:
           TF_CLI_ARGS: -no-color
-          TF_VAR_prefix: ${{ secrets.PREFIX }}
           TF_VAR_permissions_boundary_arn: ${{ secrets.PB_ARN }}
         run: |
           cd infrastructure/terraform
@@ -87,101 +99,3 @@ jobs:
         run: |
           cd infrastructure/terraform
           terraform apply -auto-approve tfplan
-          
-          # Get all sites information from Terraform outputs
-          terraform output -json all_sites > sites-config.json
-          
-          # move to root for deploy all sites
-          mv sites-config.json ../..
-          cat ../../sites-config.json
-
-      - name: Deploy all sites
-        if: github.ref == 'refs/heads/main'
-        run: |
-          # Read the sites configuration
-          SITES_JSON=$(cat sites-config.json)
-          
-          # Get list of site names
-          SITE_NAMES=$(echo "$SITES_JSON" | jq -r 'keys[]')
-          
-          echo "🚀 Deploying sites..."
-          
-          for site in $SITE_NAMES; do
-            echo "================================================"
-            echo "📦 Processing site: $site"
-            echo "================================================"
-          
-            # Extract site details
-            S3_BUCKET=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].s3_bucket")
-            CLOUDFRONT_ID=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].cloudfront_id")
-            LOCAL_PATH=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].local_path")
-            HOSTNAME=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].hostname")
-          
-            echo "  S3 Bucket: $S3_BUCKET"
-            echo "  CloudFront ID: $CLOUDFRONT_ID"
-            echo "  Local Path: $LOCAL_PATH"
-            echo "  Hostname: $HOSTNAME"
-          
-            # Check if local path exists
-            if [ ! -d "$LOCAL_PATH" ]; then
-              echo "  ⚠️  Warning: Local path $LOCAL_PATH does not exist, skipping..."
-              continue
-            fi
-          
-            # Sync files to S3
-            echo "  📤 Syncing files to S3..."
-            aws s3 sync "$LOCAL_PATH/" "s3://$S3_BUCKET/" \
-              --cache-control "public, max-age=3600" \
-              --exclude "*.map" \
-              --exclude ".git/*" \
-              --exclude ".github/*"
-          
-            echo "  ✅ Files synced to S3"
-          
-            # Create CloudFront invalidation
-            echo "  🔄 Creating CloudFront invalidation..."
-            INVALIDATION_ID=$(aws cloudfront create-invalidation \
-              --distribution-id "$CLOUDFRONT_ID" \
-              --paths "/*" \
-              --query 'Invalidation.Id' \
-              --output text)
-          
-            echo "  ✅ CloudFront invalidation created: $INVALIDATION_ID"
-            echo "  🌐 Site URL: https://$HOSTNAME"
-            echo ""
-          done
-          
-          echo "================================================"
-          echo "🎉 All sites deployed successfully!"
-          echo "================================================"
-
-      - name: Wait for invalidations
-        if: github.ref == 'refs/heads/main'
-        run: |
-          SITES_JSON=$(cat sites-config.json)
-          SITE_NAMES=$(echo "$SITES_JSON" | jq -r 'keys[]')
-          
-          echo "⏳ Waiting for CloudFront invalidations to complete..."
-          
-          for site in $SITE_NAMES; do
-            CLOUDFRONT_ID=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].cloudfront_id")
-            HOSTNAME=$(echo "$SITES_JSON" | jq -r ".[\"$site\"].hostname")
-          
-            echo "  ⌛ Waiting for $HOSTNAME (Distribution: $CLOUDFRONT_ID)..."
-          
-            # Get the most recent invalidation ID
-            INVALIDATION_ID=$(aws cloudfront list-invalidations \
-              --distribution-id "$CLOUDFRONT_ID" \
-              --query 'InvalidationList.Items[0].Id' \
-              --output text)
-          
-            if [ "$INVALIDATION_ID" != "None" ] && [ -n "$INVALIDATION_ID" ]; then
-              aws cloudfront wait invalidation-completed \
-                --distribution-id "$CLOUDFRONT_ID" \
-                --id "$INVALIDATION_ID"
-          
-              echo "  ✅ $HOSTNAME invalidation completed"
-            fi
-          done
-          
-          echo "🎉 All invalidations completed!"

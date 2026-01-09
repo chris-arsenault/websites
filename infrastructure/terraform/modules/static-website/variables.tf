@@ -1,5 +1,5 @@
 variable "hostname" {
-  description = "The full hostname for the website (e.g., robot-test.example.com)"
+  description = "The full hostname for the website (e.g., example.com)"
   type        = string
 }
 
@@ -13,26 +13,8 @@ variable "site_directory_path" {
   type        = string
 }
 
-variable "tags" {
-  description = "Tags to apply to all resources"
-  type        = map(string)
+variable "runtime_config" {
+  description = "Runtime config emitted as config.js"
+  type        = map(any)
   default     = {}
-}
-
-variable "prefix" {
-  description = "Shared prefix applied to all resource names (e.g., websites)"
-  type        = string
-  default     = "websites"
-}
-
-variable "invoke_url" {
-  description = "URL of the POST endpoint to hit bedrock"
-  type        = string
-  default     = ""
-}
-
-variable "site_name" {
-  description = "Short site identifier; leave blank to derive from hostname"
-  type        = string
-  default     = ""
 }
