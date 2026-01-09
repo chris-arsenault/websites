@@ -5,23 +5,26 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
   backend "s3" {
     region   = "us-east-1"
     key      = "ahara-static-websites.tfstate"
     encrypt  = true
-    lockfile = true
+    use_lockfile = true
   }
 }
 
-# Provider for us-east-1 (required for ACM certificates for CloudFront)
+# Provider for prod (us-east-1)
 provider "aws" {
-  alias  = "us_east_1"
   region = "us-east-1"
 
   default_tags {
     tags = {
-      Project   = "Ahara Static Websites"
+      Project   = "Websites"
       ManagedBy = "Terraform"
     }
   }
