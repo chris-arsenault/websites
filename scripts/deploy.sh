@@ -36,14 +36,9 @@ echo "Applying Terraform..."
 tf apply -auto-approve
 
 echo "Cognito user password:"
-tf output -json | python - <<'PY'
-import json
-import sys
-
-data = json.load(sys.stdin)
-value = data.get("cognito_chris_password", {}).get("value")
-if not value:
-    print("Password not available.")
-    sys.exit(0)
-print(value)
-PY
+PASSWORD="$(tf output -raw cognito_chris_password 2>/dev/null || true)"
+if [ -n "${PASSWORD}" ]; then
+  echo "${PASSWORD}"
+else
+  echo "Password not available."
+fi
