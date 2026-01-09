@@ -11,3 +11,12 @@ export interface Project {
   lastUpdated: string;
   features?: string[];
 }
+
+export interface NewsArticle {
+  id: string;
+  projectId: string;
+  title: string;
+  date: string;
+  content: string;
+  tags: string[];
+}

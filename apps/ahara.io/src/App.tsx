@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { projects } from './projects';
-import { Project } from './types';
+import { news } from './news';
+import { Project, NewsArticle } from './types';
 import './App.css';
 
 type Tab = 'projects' | 'news';
@@ -122,13 +123,46 @@ function ProjectsPage() {
   );
 }
 
+function NewsCard({ article }: { article: NewsArticle }) {
+  const project = projects.find((p) => p.id === article.projectId);
+
+  return (
+    <article className="news-card">
+      <div className="news-header">
+        <time className="news-date">{formatDate(article.date)}</time>
+        {project && (
+          <a
+            href={project.productUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="news-project-link"
+          >
+            {project.name}
+          </a>
+        )}
+      </div>
+      <h3 className="news-title">{article.title}</h3>
+      <p className="news-content">{article.content}</p>
+      <div className="news-tags">
+        {article.tags.map((tag) => (
+          <span key={tag} className="tag">{tag}</span>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 function NewsPage() {
+  const sortedNews = [...news].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
   return (
     <div className="news-page">
-      <div className="empty-state">
-        <span className="empty-icon">📰</span>
-        <h2>News Coming Soon</h2>
-        <p>Check back later for updates on projects and new releases.</p>
+      <div className="news-list">
+        {sortedNews.map((article) => (
+          <NewsCard key={article.id} article={article} />
+        ))}
       </div>
     </div>
   );
