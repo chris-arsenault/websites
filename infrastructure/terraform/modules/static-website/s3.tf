@@ -33,7 +33,7 @@ resource "aws_s3_object" "website_files" {
   bucket       = aws_s3_bucket.website.id
   key          = each.key
   source       = "${var.site_directory_path}/${each.key}"
-  etag         = filemd5("${var.site_directory_path}/${each.key}")
+  source_hash  = filemd5("${var.site_directory_path}/${each.key}")
   content_type = local.mime_types[regex("\\.[^.]+$", each.key)]
   cache_control = "public, max-age=3600"
 
