@@ -3,5 +3,5 @@ module "ahara_site" {
 
   hostname            = local.ahara_hostname
   domain_name         = local.ahara_domain_name
-  site_directory_path = "${path.module}/../../apps/ahara.io/static"
+  site_directory_path = "${path.module}/../../apps/ahara.io/dist"
 }

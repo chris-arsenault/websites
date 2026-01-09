@@ -9,7 +9,7 @@ output "all_sites" {
       cloudfront_domain = module.ahara_site.cloudfront_domain_name
       site_name         = module.ahara_site.site_name
       domain_name       = module.ahara_site.domain_name
-      local_path        = "apps/ahara.io/static"
+      local_path        = "apps/ahara.io/dist"
     }
     "ru-ai.net" = {
       url               = module.ru_ai_site.website_url
