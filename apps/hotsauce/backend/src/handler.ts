@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { randomUUID } from "crypto";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
-import { createTasting, getTasting, listTastings, putTasting } from "./services/dynamo";
+import { createTasting, deleteTasting, getTasting, listTastings, putTasting } from "./services/dynamo";
 import { verifyAuth } from "./services/auth";
 import { validateCreateTasting } from "./services/validation";
 import { downloadMediaBase64, parseBase64Data, uploadMedia } from "./services/media";
@@ -24,18 +24,60 @@ const getCorsHeaders = (origin?: string) => {
   return {
     "Access-Control-Allow-Origin": allowOrigin || allowList[0] || "*",
     "Access-Control-Allow-Headers": "authorization,content-type",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS"
   };
 };
 
 const normalizeString = (value?: string) => (value ? sanitizeOptional(value) : "");
 const normalizeMimeType = (value?: string) => (value ? value.split(";")[0].trim() : value);
+const inferMimeTypeFromKey = (key?: string): string | undefined => {
+  if (!key) {
+    return undefined;
+  }
+  const ext = key.split(".").pop()?.toLowerCase();
+  if (!ext) {
+    return undefined;
+  }
+  const map: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    ogg: "audio/ogg",
+    webm: "audio/webm",
+    m4a: "audio/mp4",
+    mp4: "audio/mp4",
+    flac: "audio/flac"
+  };
+  return map[ext];
+};
 
-const applyEnrichment = (base: TastingRecord, enrichment: Partial<TastingRecord>) => {
+const applyEnrichment = (
+  base: TastingRecord,
+  enrichment: Partial<TastingRecord>,
+  options?: { overwriteKeys?: Array<keyof TastingRecord> }
+) => {
+  const overwriteKeys = new Set(options?.overwriteKeys ?? []);
+  const shouldApplyCandidate = (candidate: unknown) => {
+    if (candidate === undefined || candidate === null) {
+      return false;
+    }
+    if (typeof candidate === "string") {
+      return candidate.trim().length > 0;
+    }
+    return true;
+  };
   (Object.keys(enrichment) as (keyof TastingRecord)[]).forEach((key) => {
     const candidate = enrichment[key];
     const current = base[key];
-    if (candidate === undefined || candidate === null) {
+    if (!shouldApplyCandidate(candidate)) {
+      return;
+    }
+    if (overwriteKeys.has(key)) {
+      base[key] = candidate as never;
       return;
     }
     if (typeof current === "string" && current.trim().length === 0) {
@@ -55,6 +97,8 @@ type ProcessEvent = {
   voiceKey?: string;
   imageMimeType?: string;
   voiceMimeType?: string;
+  forceSearch?: boolean;
+  forceVoice?: boolean;
 };
 
 const lambdaClient = new LambdaClient({});
@@ -163,6 +207,8 @@ const processTastingAsync = async (payload: ProcessEvent) => {
         heatVendor: search.searchFields.heatVendor ?? null,
         tastingNotesVendor: search.searchFields.tastingNotesVendor,
         productUrl: search.searchFields.productUrl
+      }, {
+        overwriteKeys: payload.forceSearch ? ["heatVendor", "tastingNotesVendor", "productUrl"] : []
       });
       logInfo("agent.search.complete", {
         recordId: record.id,
@@ -179,19 +225,37 @@ const processTastingAsync = async (payload: ProcessEvent) => {
       }
       const voiceS3Uri = `s3://${bucket}/${payload.voiceKey}`;
       const transcript = await transcribeVoice(voiceS3Uri, payload.voiceMimeType ?? "audio/webm");
-      applyEnrichment(record, { voiceTranscript: transcript });
+      applyEnrichment(record, { voiceTranscript: transcript }, {
+        overwriteKeys: payload.forceVoice ? ["voiceTranscript"] : []
+      });
       await updateRecordStatus(record, "voice_transcribed");
 
       const metrics = await extractVoiceMetrics(transcript);
       applyEnrichment(record, {
         score: metrics.score ?? null,
         heatUser: metrics.heatUser ?? null
+      }, {
+        overwriteKeys: payload.forceVoice ? ["score", "heatUser"] : []
       });
       await updateRecordStatus(record, "voice_extracted");
 
       const formattedNotes = await formatTastingNotes(transcript);
-      if (formattedNotes) {
-        applyEnrichment(record, { tastingNotesUser: formattedNotes });
+      const priorNotes = record.tastingNotesUser;
+      if (formattedNotes.notes) {
+        applyEnrichment(record, { tastingNotesUser: formattedNotes.notes }, {
+          overwriteKeys: payload.forceVoice ? ["tastingNotesUser"] : []
+        });
+      }
+      if (
+        formattedNotes.source === "fallback" &&
+        (payload.forceVoice || !priorNotes || priorNotes.trim().length === 0)
+      ) {
+        record.needsAttention = true;
+        record.attentionReason = "Notes fallback used";
+        logWarn("agent.notes.fallback", { recordId: record.id });
+      } else if (formattedNotes.source === "llm" && record.attentionReason === "Notes fallback used") {
+        record.needsAttention = false;
+        record.attentionReason = undefined;
       }
       await updateRecordStatus(record, "notes_formatted");
     }
@@ -278,6 +342,62 @@ export const handler = async (
           voiceKey,
           imageMimeType: agentImageMimeType,
           voiceMimeType: agentVoiceMimeType
+        });
+      } catch (error) {
+        const message = (error as Error).message;
+        await updateRecordStatus(record, "error", message);
+        logWarn("agent.process.invoke.failed", { recordId: record.id, error: message });
+      }
+
+      return emptyResponse(204, corsHeaders);
+    }
+
+    const deleteMatch = method === "DELETE" ? path.match(/^\/tastings\/([^/]+)$/) : null;
+    if (deleteMatch) {
+      const user = await verifyAuth(event.headers.authorization ?? event.headers.Authorization);
+      const recordId = decodeURIComponent(deleteMatch[1]);
+      const record = await getTasting(recordId);
+      if (!record) {
+        return jsonResponse(404, { message: "Tasting not found" }, corsHeaders);
+      }
+      if (record.createdBy && record.createdBy !== user.sub) {
+        return jsonResponse(403, { message: "Forbidden" }, corsHeaders);
+      }
+      await deleteTasting(record.id);
+      logInfo("tasting.deleted", { recordId: record.id });
+      return emptyResponse(204, corsHeaders);
+    }
+
+    const rerunMatch = method === "POST" ? path.match(/^\/tastings\/([^/]+)\/rerun$/) : null;
+    if (rerunMatch) {
+      const user = await verifyAuth(event.headers.authorization ?? event.headers.Authorization);
+      const recordId = decodeURIComponent(rerunMatch[1]);
+      const record = await getTasting(recordId);
+      if (!record) {
+        return jsonResponse(404, { message: "Tasting not found" }, corsHeaders);
+      }
+      if (record.createdBy && record.createdBy !== user.sub) {
+        return jsonResponse(403, { message: "Forbidden" }, corsHeaders);
+      }
+      if (!record.imageKey && !record.voiceKey) {
+        return jsonResponse(400, { message: "No media available to process" }, corsHeaders);
+      }
+
+      await updateRecordStatus(record, "pending");
+
+      const imageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.imageKey));
+      const voiceMimeType = normalizeMimeType(inferMimeTypeFromKey(record.voiceKey));
+
+      try {
+        await invokeAsyncProcessing({
+          action: "process",
+          recordId: record.id,
+          imageKey: record.imageKey,
+          voiceKey: record.voiceKey,
+          imageMimeType,
+          voiceMimeType,
+          forceSearch: true,
+          forceVoice: true
         });
       } catch (error) {
         const message = (error as Error).message;

@@ -12,19 +12,19 @@ tf() {
   terraform -chdir="${TF_DIR}" "$@"
 }
 
-echo "Building hotsauce backend..."
-(
-  cd "${ROOT_DIR}/apps/hotsauce/backend"
-  npm ci
-  npm run build
-)
-
-echo "Building hotsauce frontend..."
-(
-  cd "${ROOT_DIR}/apps/hotsauce/frontend"
-  npm ci
-  npm run build
-)
+echo "Building app assets..."
+while IFS= read -r package_json; do
+  app_dir="$(dirname "${package_json}")"
+  if node -e "const pkg=require(process.argv[1]); process.exit(pkg.scripts && pkg.scripts.build ? 0 : 1)" "${package_json}"; then
+    echo "Building ${app_dir##${ROOT_DIR}/}..."
+    if [ -f "${app_dir}/package-lock.json" ]; then
+      (cd "${app_dir}" && npm ci)
+    else
+      (cd "${app_dir}" && npm install)
+    fi
+    (cd "${app_dir}" && npm run build)
+  fi
+done < <(find "${ROOT_DIR}/apps" -name package.json -not -path "*/node_modules/*" -not -path "*/dist/*")
 
 echo "Initializing Terraform backend..."
 tf init \

@@ -50,15 +50,21 @@ const parseJsonFromText = (text: string): Record<string, unknown> | null => {
 };
 
 const invokeClaude = async (payload: Record<string, unknown>): Promise<string> => {
+  const requestBody = JSON.stringify(payload);
   const command = new InvokeModelCommand({
     modelId: bedrockModelId,
     contentType: "application/json",
     accept: "application/json",
-    body: JSON.stringify(payload)
+    body: requestBody
   });
-  const response = await bedrockClient.send(command);
-  const body = await decodeBody(response.body);
-  return extractClaudeText(body);
+  try {
+    const response = await bedrockClient.send(command);
+    const body = await decodeBody(response.body);
+    return extractClaudeText(body);
+  } catch (error) {
+    logWarn("bedrock.invoke.failed", { error: (error as Error).message });
+    throw error;
+  }
 };
 
 const buildTextPrompt = (instructions: string, input: string) => ({
@@ -202,7 +208,8 @@ const productUrlHints = ["/product/", "/products/", "/shop/", "/store/", "/p/", 
 
 const pageFetchTimeoutMs = 4500;
 const pageFetchLimit = 4;
-const pageExtractionLimit = 2;
+const pageExtractionLimit = 3;
+const candidatePageLimit = 2;
 const maxPageHtmlChars = 120000;
 const maxPageContentChars = 12000;
 const maxLlmContentChars = 4000;
@@ -274,6 +281,37 @@ const tokensFromValue = (value?: string) => {
 
 const hasAllTokens = (text: string, tokens: string[]) => tokens.every((token) => text.includes(token));
 
+const scoreHostnameTokens = (url: string, context: SearchContext): number => {
+  const hostname = getHostname(url);
+  if (!hostname) {
+    return 0;
+  }
+  const hostValue = hostname.replace(/\./g, "");
+  const makerTokens = tokensFromValue(context.maker);
+  const nameTokens = tokensFromValue(context.name);
+  let score = 0;
+
+  if (makerTokens.length) {
+    const matches = makerTokens.filter((token) => hostValue.includes(token));
+    if (matches.length === makerTokens.length) {
+      score += 6;
+    } else if (matches.length > 0) {
+      score += 2 + matches.length;
+    }
+  }
+
+  if (nameTokens.length) {
+    const matches = nameTokens.filter((token) => hostValue.includes(token));
+    if (matches.length === nameTokens.length) {
+      score += 3;
+    } else if (matches.length > 0) {
+      score += 1;
+    }
+  }
+
+  return score;
+};
+
 const isBlockedDomain = (url: string) => {
   const hostname = getHostname(url);
   if (!hostname) {
@@ -338,6 +376,7 @@ const scoreSearchResult = (result: SearchResult, context: SearchContext): number
   if (urlHasProductHint(url)) {
     score += 1;
   }
+  score += scoreHostnameTokens(result.url, context);
   const trustedScore = scoreTrustedDomain(result.url);
   if (trustedScore) {
     score += trustedScore;
@@ -363,8 +402,46 @@ const buildSearchQuery = (context: SearchContext): string => {
   const quoted = parts.map((value) => (value.includes(" ") ? `"${value}"` : value));
   const base = quoted.join(" ").trim();
   const needsHotSauce = !base.toLowerCase().includes("hot sauce") && !base.toLowerCase().includes("hotsauce");
-  const queryParts = [base, needsHotSauce ? "hot sauce" : "", "buy OR shop OR product"].filter(Boolean);
+  const queryParts = [base, needsHotSauce ? "hot sauce" : "", "official OR buy OR shop OR product"].filter(Boolean);
   return queryParts.join(" ").trim();
+};
+
+const buildOfficialQuery = (context: SearchContext): string => {
+  const parts = [context.maker, context.name].filter(Boolean).map((value) => value!.trim());
+  if (!parts.length) {
+    return "";
+  }
+  const quoted = parts.map((value) => (value.includes(" ") ? `"${value}"` : value));
+  const base = quoted.join(" ").trim();
+  const needsHotSauce = !base.toLowerCase().includes("hot sauce") && !base.toLowerCase().includes("hotsauce");
+  const queryParts = [base, needsHotSauce ? "hot sauce" : "", "official site"].filter(Boolean);
+  return queryParts.join(" ").trim();
+};
+
+const mergeSearchResults = (primary: SearchResult[], secondary: SearchResult[]): SearchResult[] => {
+  const combined = [...primary, ...secondary];
+  const seen = new Set<string>();
+  return combined.filter((result) => {
+    if (seen.has(result.url)) {
+      return false;
+    }
+    seen.add(result.url);
+    return true;
+  });
+};
+
+const shouldRunOfficialQuery = (results: SearchResult[], context: SearchContext): boolean => {
+  const makerTokens = tokensFromValue(context.maker);
+  if (!makerTokens.length) {
+    return false;
+  }
+  const topResults = results.slice(0, 3);
+  const hasMakerDomain = topResults.some((result) => scoreHostnameTokens(result.url, context) >= 4);
+  if (hasMakerDomain) {
+    return false;
+  }
+  const hasMakerTitle = topResults.some((result) => hasAllTokens(normalizeText(result.title), makerTokens));
+  return !hasMakerTitle;
 };
 
 const searchTavily = async (query: string): Promise<SearchResult[]> => {
@@ -383,7 +460,7 @@ const searchTavily = async (query: string): Promise<SearchResult[]> => {
     max_results: 8,
     include_answer: false,
     include_images: false,
-    include_raw_content: false
+    include_raw_content: true
   };
   logInfo("agent.search.request", { provider: "tavily", query, maxResults: payload.max_results });
   let response: Response;
@@ -502,6 +579,138 @@ const scoreContentSignals = (contentText: string, context: SearchContext): numbe
   return score;
 };
 
+const contentKeywordWindows = [
+  "tasting notes",
+  "flavor",
+  "flavour",
+  "notes",
+  "taste",
+  "aroma",
+  "pairing",
+  "finish",
+  "description",
+  "ingredients",
+  "heat level",
+  "spice level",
+  "scoville"
+];
+
+const sliceContentWindow = (text: string, index: number, before = 180, after = 220) => {
+  const start = Math.max(0, index - before);
+  const end = Math.min(text.length, index + after);
+  return text.slice(start, end);
+};
+
+const pickRelevantContent = (contentText: string) => {
+  const cleaned = collapseWhitespace(contentText);
+  const lower = cleaned.toLowerCase();
+  const windows: string[] = [];
+  for (const keyword of contentKeywordWindows) {
+    const index = lower.indexOf(keyword);
+    if (index >= 0) {
+      windows.push(sliceContentWindow(cleaned, index));
+    }
+    if (windows.length >= 6) {
+      break;
+    }
+  }
+  const combined = collapseWhitespace(windows.join(" "));
+  const fallback = cleaned.slice(0, maxLlmContentChars);
+  const result = combined.length > 40 ? combined : fallback;
+  return result.slice(0, maxLlmContentChars);
+};
+
+const heatWordMap: Record<string, number> = {
+  mild: 2,
+  "medium mild": 2,
+  medium: 3,
+  "medium hot": 4,
+  "medium-hot": 4,
+  hot: 4,
+  "very hot": 5,
+  "extra hot": 5,
+  "extremely hot": 5
+};
+
+const extractHeatFromText = (contentText: string): number | undefined => {
+  const lower = contentText.toLowerCase();
+  const ratioMatch = lower.match(/(?:heat|spice)\s*(?:level)?\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+)/);
+  if (ratioMatch) {
+    const value = Number(ratioMatch[1]);
+    const denom = Number(ratioMatch[2]);
+    if (Number.isFinite(value) && Number.isFinite(denom) && denom > 0) {
+      const scaled = denom === 5 ? value : (value / denom) * 5;
+      return clampScore(Math.round(scaled * 10) / 10);
+    }
+  }
+
+  const numericMatch = lower.match(/(?:heat|spice)\s*(?:level)?\s*[:\-]?\s*(\d+(?:\.\d+)?)/);
+  if (numericMatch) {
+    const value = Number(numericMatch[1]);
+    if (Number.isFinite(value)) {
+      return clampScore(value);
+    }
+  }
+
+  const wordMatch = lower.match(/(?:heat|spice)\s*(?:level)?\s*[:\-]?\s*([a-z\- ]{3,20})/);
+  if (wordMatch) {
+    const token = collapseWhitespace(wordMatch[1]).trim();
+    const mapped = heatWordMap[token];
+    if (mapped !== undefined) {
+      return mapped;
+    }
+  }
+
+  const scovilleMatch = lower.match(/(\d{1,3}(?:,\d{3})+|\d{4,})\s*(?:shu|scoville)/);
+  if (scovilleMatch) {
+    const value = Number(scovilleMatch[1].replace(/,/g, ""));
+    if (Number.isFinite(value)) {
+      if (value >= 100000) return 5;
+      if (value >= 20000) return 4;
+      if (value >= 5000) return 3;
+      if (value >= 1000) return 2;
+      return 1;
+    }
+  }
+
+  return undefined;
+};
+
+const extractVendorNotesFromText = (contentText: string): string | undefined => {
+  const cleaned = collapseWhitespace(contentText);
+  if (!cleaned) {
+    return undefined;
+  }
+  const lower = cleaned.toLowerCase();
+  const segments: string[] = [];
+  for (const keyword of contentKeywordWindows) {
+    if (keyword.length < 4) {
+      continue;
+    }
+    const index = lower.indexOf(keyword);
+    if (index >= 0) {
+      segments.push(sliceContentWindow(cleaned, index, 120, 220));
+    }
+    if (segments.length >= 4) {
+      break;
+    }
+  }
+  if (!segments.length) {
+    const fallback = cleaned.slice(0, 280);
+    return fallback.length > 40 ? fallback : undefined;
+  }
+  const combined = collapseWhitespace(segments.join(" "));
+  if (combined.length < 40) {
+    return undefined;
+  }
+  return combined.slice(0, 400);
+};
+
+const extractVendorHints = (contentText: string) => ({
+  heatVendor: extractHeatFromText(contentText),
+  tastingNotesVendor: extractVendorNotesFromText(contentText)
+});
+
 const buildPageSignals = async (result: SearchResult, context: SearchContext): Promise<PageSignals> => {
   const baseScore = scoreSearchResult(result, context);
   const shouldFetch = !isBlockedDomain(result.url);
@@ -549,6 +758,17 @@ const summarizePageSignals = (pages: PageSignals[], limit = 3) =>
     hasProductSchema: page.hasProductSchema,
     contentSource: page.contentSource
   }));
+
+const mergePageSignals = (primary: PageSignals[], secondary: PageSignals[]) => {
+  const map = new Map<string, PageSignals>();
+  for (const page of [...primary, ...secondary]) {
+    const existing = map.get(page.result.url);
+    if (!existing || page.score > existing.score) {
+      map.set(page.result.url, page);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.score - a.score);
+};
 
 const selectBestSearchResult = (results: SearchResult[], context: SearchContext) => {
   if (!results.length) {
@@ -605,6 +825,7 @@ const scoreUrlCandidate = (url: string, context: SearchContext): number => {
   if (urlHasProductHint(urlLower)) {
     score += 2;
   }
+  score += scoreHostnameTokens(url, context);
   const trustedScore = scoreTrustedDomain(url);
   if (trustedScore) {
     score += trustedScore;
@@ -821,15 +1042,18 @@ const extractFromPageContent = async (context: SearchContext, page: PageSignals)
     return null;
   }
   logInfo("agent.search.extract.page.start", { url: page.result.url, hasProductSchema: page.hasProductSchema });
+  const hints = extractVendorHints(page.contentText);
+  const relevantContent = pickRelevantContent(page.contentText);
   const instructions =
-    "You are extracting hot sauce product details from a webpage. Use the context to verify relevance. If the page is not about the target product, return JSON only with key: relevant set to false. Otherwise return JSON only with keys: relevant, name, maker, style, heat_vendor, tasting_notes_vendor, product_url. Use null for unknowns.";
+    "You are extracting hot sauce product details from a webpage. Use the context to verify relevance. If the page is not about the target product, return JSON only with key: relevant set to false. Otherwise return JSON only with keys: relevant, name, maker, style, heat_vendor, tasting_notes_vendor, product_url. Use null for unknowns. Prefer official vendor copy for tasting_notes_vendor and vendor-provided heat level or Scoville when available.";
   const payload = buildTextPrompt(
     instructions,
     JSON.stringify({
       context,
       url: page.result.url,
       title: page.result.title,
-      content: page.contentText.slice(0, maxLlmContentChars)
+      content: relevantContent,
+      hints
     })
   );
   const text = await invokeClaude(payload);
@@ -850,6 +1074,12 @@ const extractFromPageContent = async (context: SearchContext, page: PageSignals)
     tastingNotesVendor: typeof parsed.tasting_notes_vendor === "string" ? parsed.tasting_notes_vendor : undefined,
     productUrl: typeof parsed.product_url === "string" ? parsed.product_url : undefined
   };
+  if ((enrichment.heatVendor === undefined || enrichment.heatVendor === null) && hints.heatVendor !== undefined) {
+    enrichment.heatVendor = hints.heatVendor;
+  }
+  if (!enrichment.tastingNotesVendor && hints.tastingNotesVendor) {
+    enrichment.tastingNotesVendor = hints.tastingNotesVendor;
+  }
   if (!enrichment.productUrl && (enrichment.name || enrichment.maker)) {
     enrichment.productUrl = page.result.url;
   }
@@ -955,26 +1185,135 @@ const stripRatingsFromNotes = (notes: string): string => {
     /\b\d+\s*\/\s*10\b/gi,
     /\b\d+\s*\/\s*5\b/gi,
     /\b\d+\s*out of\s*10\b/gi,
-    /\b(score|rating|heat|heat level|spice level)\s*[:\-]?\s*\d+(\.\d+)?\b/gi
+    /\b(score|rating)\s*[:\-]?\s*\d+(\.\d+)?\b/gi,
+    /\b(heat|heat level|spice level)\s*[:\-]?\s*\d+(\.\d+)?\b/gi
   ];
   let cleaned = notes;
   for (const pattern of patterns) {
     cleaned = cleaned.replace(pattern, "");
   }
-  return cleaned.replace(/\s{2,}/g, " ").replace(/\s+\./g, ".").trim();
+  cleaned = cleaned.replace(/\b(uh|um|erm|er|hmm+)\b/gi, " ");
+  const lines = cleaned
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return lines.join("\n").replace(/\s{2,}/g, " ").replace(/\s+\./g, ".").trim();
 };
 
-export const formatTastingNotes = async (transcript: string): Promise<string | undefined> => {
+const fallbackTastingNotesFromTranscript = (transcript: string): string | undefined => {
+  const trimmed = transcript.trim();
+  if (!trimmed || trimmed.length < 12) {
+    return undefined;
+  }
+  return trimmed.slice(0, 1200);
+};
+
+type NotesResult = {
+  notes?: string;
+  source: "llm" | "fallback" | "none";
+};
+
+const formatNotesLabel = (label: string) => {
+  const cleaned = label.trim();
+  if (!cleaned) {
+    return "Note";
+  }
+  const normalized = cleaned.toLowerCase();
+  const known: Record<string, string> = {
+    flavor: "Flavor",
+    flavour: "Flavor",
+    aroma: "Aroma",
+    texture: "Texture",
+    heat: "Heat",
+    "heat level": "Heat",
+    spice: "Heat",
+    "spice level": "Heat",
+    pairings: "Pairings",
+    pairing: "Pairings",
+    finish: "Finish",
+    description: "Description"
+  };
+  if (known[normalized]) {
+    return known[normalized];
+  }
+  return cleaned
+    .replace(/[_-]+/g, " ")
+    .split(" ")
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : ""))
+    .join(" ")
+    .trim();
+};
+
+const notesToString = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (!value) {
+    return "";
+  }
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      .join("\n");
+  }
+  if (typeof value !== "object") {
+    return "";
+  }
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    ([_, val]) => typeof val === "string" && val.trim().length > 0
+  );
+  if (!entries.length) {
+    return "";
+  }
+  const preferredOrder = ["flavor", "aroma", "texture", "heat", "pairings", "finish"];
+  const weighted = entries.map(([key, val]) => ({
+    key,
+    label: formatNotesLabel(key),
+    value: val as string,
+    weight: preferredOrder.indexOf(key.toLowerCase())
+  }));
+  weighted.sort((a, b) => {
+    if (a.weight === -1 && b.weight === -1) {
+      return 0;
+    }
+    if (a.weight === -1) return 1;
+    if (b.weight === -1) return -1;
+    return a.weight - b.weight;
+  });
+  return weighted.map((entry) => `${entry.label}: ${entry.value.trim()}`).join("\n");
+};
+
+const runNotesLlm = async (transcript: string): Promise<string> => {
   const instructions =
-    "Rewrite this transcript into clean tasting notes. Output JSON only with key: tasting_notes_user. Use short labeled lines if relevant: Flavor, Aroma, Texture, Heat, Pairings, Finish. Remove numeric ratings or scores; do not include numbers like 8/10. If a section is not mentioned, omit it.";
+    "Rewrite this transcript into clean tasting notes. Output JSON only with key: tasting_notes_user as a single string. Use short labeled lines if relevant: Flavor, Aroma, Texture, Heat, Pairings, Finish. Remove numeric ratings or scores; do not include numbers like 8/10. Remove filler words like um/uh. Keep descriptive text even if informal. If the transcript contains no tasting notes, return an empty string. Do not return nested objects or arrays.";
   const payload = buildTextPrompt(instructions, transcript);
   const text = await invokeClaude(payload);
   const parsed = parseJsonFromText(text);
-  if (!parsed || typeof parsed.tasting_notes_user !== "string") {
-    return undefined;
+  if (!parsed) {
+    return "";
   }
-  const cleaned = stripRatingsFromNotes(parsed.tasting_notes_user);
-  return cleaned.length ? cleaned : undefined;
+  const rawNotes = (parsed as Record<string, unknown>).tasting_notes_user;
+  return notesToString(rawNotes);
+};
+
+export const formatTastingNotes = async (transcript: string): Promise<NotesResult> => {
+  if (!transcript) {
+    return { source: "none" };
+  }
+  let candidate = await runNotesLlm(transcript);
+  let cleaned = stripRatingsFromNotes(candidate);
+  if (!cleaned.length) {
+    candidate = await runNotesLlm(transcript);
+    cleaned = stripRatingsFromNotes(candidate);
+  }
+  if (cleaned.length) {
+    return { notes: cleaned, source: "llm" };
+  }
+  const fallback = fallbackTastingNotesFromTranscript(transcript);
+  if (fallback) {
+    return { notes: fallback, source: "fallback" };
+  }
+  return { source: "none" };
 };
 
 export const extractVoiceMetrics = async (transcript: string): Promise<AgentEnrichment> => {
@@ -1009,7 +1348,18 @@ export const runSearchEnrichment = async (
     context,
     candidateUrls: candidateUrls.filter(Boolean)
   });
-  const searchResults = await searchTavily(query);
+  let searchResults = await searchTavily(query);
+  const officialQuery = buildOfficialQuery(context);
+  if (
+    officialQuery &&
+    (searchResults.length === 0 || shouldRunOfficialQuery(searchResults, context))
+  ) {
+    const officialResults = await searchTavily(officialQuery);
+    if (officialResults.length) {
+      logInfo("agent.search.official", { query: officialQuery, added: officialResults.length });
+    }
+    searchResults = mergeSearchResults(searchResults, officialResults);
+  }
   logInfo("agent.search.results", { count: searchResults.length, query });
   if (searchResults.length === 0) {
     logWarn("agent.search.empty", { query });
@@ -1017,7 +1367,7 @@ export const runSearchEnrichment = async (
     logInfo("agent.search.top", { results: summarizeSearchResults(searchResults, context) });
   }
   const bestResult = selectBestSearchResult(searchResults, context);
-  const pageSignals = searchResults.length
+  let pageSignals = searchResults.length
     ? (
         await Promise.allSettled(
           searchResults
@@ -1034,6 +1384,29 @@ export const runSearchEnrichment = async (
         .sort((a, b) => b.score - a.score)
     : [];
 
+  const candidatePageUrls = candidateUrls.filter((url): url is string => Boolean(url));
+  if (candidatePageUrls.length) {
+    const candidateResults = candidatePageUrls
+      .filter((url) => !searchResults.some((result) => result.url === url))
+      .slice(0, candidatePageLimit)
+      .map((url) => ({
+        title: url,
+        url,
+        snippet: "",
+        source: "tavily" as const
+      }));
+    if (candidateResults.length) {
+      const candidateSignals = (
+        await Promise.allSettled(candidateResults.map((result) => buildPageSignals(result, context)))
+      )
+        .filter(
+          (result): result is { status: "fulfilled"; value: PageSignals } => result.status === "fulfilled"
+        )
+        .map((result) => result.value);
+      pageSignals = mergePageSignals(pageSignals, candidateSignals);
+    }
+  }
+
   if (pageSignals.length) {
     logInfo("agent.search.pages", { results: summarizePageSignals(pageSignals) });
   }
@@ -1045,6 +1418,31 @@ export const runSearchEnrichment = async (
   }
 
   let searchFields = pageSignals.length ? await extractFromTopPages(context, pageSignals) : {};
+  if (pageSignals.length && (searchFields.heatVendor == null || !searchFields.tastingNotesVendor)) {
+    const extraPages = pageSignals.slice(pageExtractionLimit, pageExtractionLimit + 2);
+    logInfo("agent.search.extract.more", {
+      missingHeat: searchFields.heatVendor == null,
+      missingNotes: !searchFields.tastingNotesVendor,
+      candidateCount: extraPages.length
+    });
+    for (const page of extraPages) {
+      const extra = await extractFromPageContent(context, page);
+      if (extra) {
+        if (searchFields.heatVendor == null && extra.heatVendor != null) {
+          searchFields.heatVendor = extra.heatVendor;
+        }
+        if (!searchFields.tastingNotesVendor && extra.tastingNotesVendor) {
+          searchFields.tastingNotesVendor = extra.tastingNotesVendor;
+        }
+        if (!searchFields.productUrl && extra.productUrl) {
+          searchFields.productUrl = extra.productUrl;
+        }
+      }
+      if (searchFields.heatVendor != null && searchFields.tastingNotesVendor) {
+        break;
+      }
+    }
+  }
   if (summarizeEnrichmentFields(searchFields).length === 0 && searchResults.length > 0) {
     searchFields = await extractFromSearchResults(context, searchResults.slice(0, 8), bestPage?.url);
   }

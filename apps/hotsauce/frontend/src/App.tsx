@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import "./App.css";
-import { createTasting, fetchTastings } from "./api";
+import { createTasting, deleteTasting, fetchTastings, rerunTasting } from "./api";
 import { getSession, signIn, signOut } from "./auth";
 import type { CreateTastingInput, Filters, TastingRecord } from "./types";
 
@@ -202,6 +202,9 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [submitStatus, setSubmitStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [rerunId, setRerunId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TastingRecord | null>(null);
+  const [deleteStatus, setDeleteStatus] = useState<"idle" | "deleting">("idle");
   const [menuOpen, setMenuOpen] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
@@ -603,6 +606,77 @@ const App = () => {
     }
   };
 
+  const handleRerun = async (record: TastingRecord) => {
+    if (auth.status !== "signedIn") {
+      setErrorMessage("Sign in to rerun.");
+      return;
+    }
+    if (!record.imageKey && !record.voiceKey) {
+      setErrorMessage("No media available to rerun.");
+      return;
+    }
+    setErrorMessage("");
+    setRerunId(record.id);
+    try {
+      await rerunTasting(record.id, auth.token);
+      setTastings((prev) =>
+        prev.map((item) =>
+          item.id === record.id
+            ? {
+                ...item,
+                status: "pending",
+                processingError: undefined
+              }
+            : item
+        )
+      );
+      setLoading(true);
+      try {
+        const data = await fetchTastings();
+        setTastings(data);
+      } finally {
+        setLoading(false);
+      }
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+    } finally {
+      setRerunId(null);
+    }
+  };
+
+  const openDeleteModal = (record: TastingRecord) => {
+    if (auth.status !== "signedIn") {
+      setErrorMessage("Sign in to delete.");
+      return;
+    }
+    setDeleteTarget(record);
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteTarget(null);
+    setDeleteStatus("idle");
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+    if (auth.status !== "signedIn") {
+      setErrorMessage("Sign in to delete.");
+      return;
+    }
+    setErrorMessage("");
+    setDeleteStatus("deleting");
+    try {
+      await deleteTasting(deleteTarget.id, auth.token);
+      setTastings((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      closeDeleteModal();
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+      setDeleteStatus("idle");
+    }
+  };
+
   return (
     <div className="app">
       {/* Compact Header */}
@@ -946,6 +1020,23 @@ const App = () => {
                   {item.productUrl && (
                     <a className="card-link" href={item.productUrl} target="_blank" rel="noreferrer">View Product</a>
                   )}
+                  {auth.status === "signedIn" && (
+                    <div className="card-actions">
+                      {(item.imageKey || item.voiceKey) && (
+                        <button
+                          className="rerun-btn"
+                          onClick={() => handleRerun(item)}
+                          disabled={rerunId === item.id}
+                          title="Re-run the enrichment pipeline"
+                        >
+                          {rerunId === item.id ? "Re-running..." : "Rerun pipeline"}
+                        </button>
+                      )}
+                      <button className="delete-btn" onClick={() => openDeleteModal(item)} title="Delete tasting">
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </article>
             ))}
@@ -953,9 +1044,39 @@ const App = () => {
         )}
       </main>
 
+      {deleteTarget && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" onClick={closeDeleteModal}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Delete tasting?</h3>
+              <button type="button" className="modal-close" onClick={closeDeleteModal} aria-label="Close">
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>
+                This will permanently remove{" "}
+                <strong>{deleteTarget.name || "this tasting"}</strong>.
+              </p>
+              <p className="modal-warning">This action cannot be undone.</p>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-ghost" onClick={closeDeleteModal} disabled={deleteStatus === "deleting"}>
+                Cancel
+              </button>
+              <button type="button" className="btn-danger" onClick={confirmDelete} disabled={deleteStatus === "deleting"}>
+                {deleteStatus === "deleting" ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <footer className="app-footer">
         <span>Copyright © 2025</span>
-        <img src="/tsonu-combined.png" alt="tsonu" height="14" />
+        <a href="https://ahara.io" target="_blank" rel="noreferrer">
+          <img src="/tsonu-combined.png" alt="tsonu" height="14" />
+        </a>
       </footer>
     </div>
   );

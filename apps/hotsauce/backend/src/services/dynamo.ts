@@ -1,5 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand, ScanCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import type { TastingRecord } from "../types";
 
 const client = new DynamoDBClient({});
@@ -105,4 +105,12 @@ export const getTasting = async (id: string): Promise<TastingRecord | null> => {
 
   const response = await docClient.send(command);
   return (response.Item as TastingRecord) ?? null;
+};
+
+export const deleteTasting = async (id: string): Promise<void> => {
+  const command = new DeleteCommand({
+    TableName: tableName(),
+    Key: { id }
+  });
+  await docClient.send(command);
 };

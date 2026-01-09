@@ -14,6 +14,8 @@ export type TastingRecord = {
   updatedAt: string;
   status?: ProcessingStatus;
   processingError?: string;
+  needsAttention?: boolean;
+  attentionReason?: string;
   name: string;
   maker: string;
   date: string;

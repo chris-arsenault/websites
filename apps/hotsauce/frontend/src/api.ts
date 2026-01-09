@@ -32,3 +32,29 @@ export const createTasting = async (payload: CreateTastingInput, token: string):
   const responseBody = (await response.json()) as { data: TastingRecord };
   return responseBody.data ?? null;
 };
+
+export const rerunTasting = async (id: string, token: string): Promise<void> => {
+  const response = await fetch(`${config.apiBaseUrl}/tastings/${id}/rerun`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message ?? "Failed to rerun pipeline");
+  }
+};
+
+export const deleteTasting = async (id: string, token: string): Promise<void> => {
+  const response = await fetch(`${config.apiBaseUrl}/tastings/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message ?? "Failed to delete tasting");
+  }
+};

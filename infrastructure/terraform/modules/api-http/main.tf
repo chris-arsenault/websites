@@ -44,8 +44,8 @@ resource "aws_iam_role_policy" "lambda_inline" {
 resource "aws_lambda_function" "api" {
   function_name = "${local.safe_name}-api"
   role          = aws_iam_role.lambda.arn
-  handler       = "handler.handler"
-  runtime       = "nodejs18.x"
+  handler       = var.lambda_handler
+  runtime       = var.lambda_runtime
 
   filename         = data.archive_file.lambda_zip.output_path
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
@@ -79,8 +79,8 @@ resource "aws_apigatewayv2_api" "api" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_headers = ["authorization", "content-type"]
-    allow_methods = ["GET", "POST", "OPTIONS"]
+    allow_headers = ["*"]
+    allow_methods = ["GET", "POST", "DELETE", "OPTIONS"]
     allow_origins = var.cors_allow_origins
     max_age       = 600
   }
@@ -122,20 +122,55 @@ data "aws_route53_zone" "api" {
   private_zone = false
 }
 
+resource "aws_acm_certificate" "api" {
+  domain_name       = var.custom_domain_name
+  validation_method = "DNS"
+
+  tags = local.default_tags
+}
+
+resource "aws_route53_record" "cert_validation" {
+  for_each = toset([var.custom_domain_name])
+
+  zone_id = data.aws_route53_zone.api.zone_id
+  name = one([
+    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.resource_record_name
+    if dvo.domain_name == each.value
+  ])
+  type = one([
+    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.resource_record_type
+    if dvo.domain_name == each.value
+  ])
+  ttl     = 300
+  records = [one([
+    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.resource_record_value
+    if dvo.domain_name == each.value
+  ])]
+}
+
+resource "aws_acm_certificate_validation" "api" {
+  certificate_arn         = aws_acm_certificate.api.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
 resource "aws_apigatewayv2_domain_name" "api" {
   domain_name = var.custom_domain_name
 
   domain_name_configuration {
-    certificate_arn = var.certificate_arn
+    certificate_arn = aws_acm_certificate.api.arn
     endpoint_type   = "REGIONAL"
     security_policy = "TLS_1_2"
   }
+
+  depends_on = [aws_acm_certificate_validation.api]
 }
 
 resource "aws_apigatewayv2_api_mapping" "api" {
   api_id      = aws_apigatewayv2_api.api.id
   domain_name = aws_apigatewayv2_domain_name.api.id
-  stage       = aws_apigatewayv2_stage.api.name
+  stage       = "$default"
+
+  depends_on = [aws_apigatewayv2_stage.api]
 }
 
 resource "aws_route53_record" "api_alias" {

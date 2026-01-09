@@ -3,9 +3,9 @@ output "api_endpoint" {
   value       = aws_apigatewayv2_api.api.api_endpoint
 }
 
-output "custom_domain_name" {
-  description = "Custom domain name for the API"
-  value       = var.custom_domain_name
+output "api_id" {
+  description = "HTTP API ID"
+  value       = aws_apigatewayv2_api.api.id
 }
 
 output "lambda_function_name" {

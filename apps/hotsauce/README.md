@@ -1,39 +1,28 @@
 # Hot Sauce Tasting Tracker
 
-Quick-and-dirty Vite + React frontend with a Node.js Lambda backend, DynamoDB storage, and Cognito auth.
+Vite + React UI with a Node.js Lambda API for logging hot sauce tastings.
 
-## Structure
+This app targets a single deployment, so defaults are baked in and documented for clarity.
 
-- `frontend/` Vite + React + TypeScript UI
-- `backend/` Node.js Lambda (TypeScript) with DynamoDB + Bedrock workflow
-- `infra/` Terraform for AWS resources
+## Architecture
 
-## Deploy with Terraform
+- Frontend SPA with photo + voice capture and sign-in.
+- API for ingest, enrichment, and listing tastings.
+- Storage in S3 (media) and DynamoDB (tastings).
+- Auth via Cognito ID tokens on write routes.
+- Enrichment via Transcribe + Bedrock, with Tavily search for product lookup.
 
-```bash
-cp .env.example .env
-npm run deploy
-```
+## Defaults
 
-Requirements:
+- App URL: https://sauce.ahara.io
+- API URL: https://sauce-api.ahara.io
+- Resource prefix: hotsauce-ffcf7631 (table and buckets)
+- Allowed origins: http://localhost:5173, https://sauce.ahara.io
+- Public media base: https://hotsauce-ffcf7631-media.s3.amazonaws.com
+- Model tuning: anthropic.claude-3-haiku-20240307-v1:0, en-US, poll 1500ms, max polls 40
+- Tavily key: loaded from Secrets Manager entry tavily/dev in deployed environments
 
-- Terraform >= 1.5
-- AWS credentials + region in `.env`
-- Route53 hosted zone for `ahara.io` in the same AWS account
-
-The deploy script builds the backend, builds the frontend, and applies Terraform (which uploads frontend assets).
-Run `npm install` in `frontend/` and `backend/` once before the first deploy.
-
-The frontend reads runtime settings from `/config.js`, which Terraform writes with the API + Cognito IDs.
-
-`.env` is for secrets only and is ignored by git.
-
-By default the stack binds to `sauce.ahara.io` (frontend) and `sauce-api.ahara.io/api` (API). Override in `infra/prod.tfvars` only if needed.
-
-Terraform creates a seed Cognito user (default `admin@ahara.io`, derived from the hosted zone) with a random password; the deploy script prints the credentials at the end.
-The seed user has a display name of "Hot Sauce Admin" and preferred username "admin".
-
-## Frontend setup
+## Local development
 
 ```bash
 cd frontend
@@ -42,43 +31,18 @@ cp .env.example .env
 npm run dev
 ```
 
-Required env vars:
-
-- `VITE_API_BASE_URL`
-- `VITE_COGNITO_USER_POOL_ID`
-- `VITE_COGNITO_CLIENT_ID`
-
-## Backend setup
-
 ```bash
 cd backend
 npm install
 npm run build
 ```
 
-Required env vars:
+The frontend reads runtime settings from `/config.js` when deployed; the `.env.example` files mirror defaults for local use.
 
-- `TABLE_NAME`
-- `MEDIA_BUCKET`
-- `COGNITO_USER_POOL_ID`
-- `COGNITO_CLIENT_ID`
+## Deploy
 
-Optional:
+```bash
+./scripts/deploy.sh
+```
 
-- `PUBLIC_MEDIA_BASE_URL`
-- `BEDROCK_MODEL_ID`
-- `TRANSCRIBE_LANGUAGE`
-
-## DynamoDB
-
-Terraform creates a table with a string partition key named `id`.
-
-## Cognito
-
-Terraform creates a User Pool + App Client. Create users in Cognito before signing in.
-
-## Notes
-
-- Image + voice enrichment uses Bedrock and Transcribe; see `backend/README.md`.
-- API Gateway should pass through `Authorization` headers and enable CORS.
-- Camera/mic capture requires HTTPS (or localhost) in modern browsers.
+The deploy script builds both apps and applies the infrastructure.

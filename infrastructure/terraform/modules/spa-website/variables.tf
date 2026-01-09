@@ -23,8 +23,3 @@ variable "bucket_name" {
   description = "S3 bucket name for the SPA assets"
   type        = string
 }
-
-variable "certificate_arn" {
-  description = "ACM certificate ARN for the CloudFront distribution"
-  type        = string
-}
