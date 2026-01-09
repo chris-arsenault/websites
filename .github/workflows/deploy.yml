@@ -45,6 +45,23 @@ jobs:
           role-session-name: GitHubActions-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build sites with package.json
+        run: |
+          for site_dir in sites/*/; do
+            if [ -f "${site_dir}package.json" ]; then
+              echo "📦 Building ${site_dir}..."
+              cd "$site_dir"
+              npm ci
+              npm run build
+              cd -
+            fi
+          done
+
       - name: Terraform Init
         env:
           TF_CLI_ARGS: -no-color
