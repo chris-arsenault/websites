@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import Fuse from "fuse.js";
 import "./App.css";
 import { createTasting, deleteTasting, fetchTastings, rerunTasting } from "./api";
 import { getSession, signIn, signOut } from "./auth";
@@ -7,6 +8,7 @@ import type { CreateTastingInput, Filters, TastingRecord } from "./types";
 const defaultFilters: Filters = {
   search: "",
   style: "",
+  ingredient: "",
   minScore: "",
   minHeat: "",
   date: "",
@@ -217,11 +219,17 @@ const App = () => {
 
   // Media state
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const backVideoRef = useRef<HTMLVideoElement | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [backCameraActive, setBackCameraActive] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [imageBase64, setImageBase64] = useState("");
   const [imageMimeType, setImageMimeType] = useState("");
+  const [backImagePreview, setBackImagePreview] = useState("");
+  const [backImageBase64, setBackImageBase64] = useState("");
+  const [backImageMimeType, setBackImageMimeType] = useState("");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [backCameraStream, setBackCameraStream] = useState<MediaStream | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
@@ -320,11 +328,31 @@ const App = () => {
   }, [cameraStream, cameraActive]);
 
   useEffect(() => {
+    const video = backVideoRef.current;
+    if (!backCameraStream || !backCameraActive || !video) return;
+    video.srcObject = backCameraStream;
+    const startPreview = async () => {
+      try {
+        await video.play();
+      } catch {
+        setErrorMessage("Unable to start camera preview.");
+      }
+    };
+    startPreview();
+    return () => {
+      if (video.srcObject === backCameraStream) {
+        video.srcObject = null;
+      }
+    };
+  }, [backCameraStream, backCameraActive]);
+
+  useEffect(() => {
     return () => {
       cameraStream?.getTracks().forEach((track) => track.stop());
+      backCameraStream?.getTracks().forEach((track) => track.stop());
       audioStream?.getTracks().forEach((track) => track.stop());
     };
-  }, [cameraStream, audioStream]);
+  }, [cameraStream, backCameraStream, audioStream]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -338,10 +366,11 @@ const App = () => {
   const filteredTastings = useMemo(() => {
     const lowerSearch = filters.search.trim().toLowerCase();
     const lowerStyle = filters.style.trim().toLowerCase();
+    const ingredientQuery = filters.ingredient.trim();
     const minScore = filters.minScore ? Number(filters.minScore) : null;
     const minHeat = filters.minHeat ? Number(filters.minHeat) : null;
 
-    const results = tastings.filter((item) => {
+    let results = tastings.filter((item) => {
       if (lowerSearch) {
         const combined = `${item.name} ${item.maker}`.toLowerCase();
         if (!combined.includes(lowerSearch)) return false;
@@ -353,6 +382,17 @@ const App = () => {
       return true;
     });
 
+    // Fuzzy ingredient search with Fuse.js
+    if (ingredientQuery && results.length > 0) {
+      const fuse = new Fuse(results, {
+        keys: ["ingredients"],
+        threshold: 0.4,
+        ignoreLocation: true,
+        useExtendedSearch: true
+      });
+      results = fuse.search(ingredientQuery).map((r) => r.item);
+    }
+
     return [...results].sort((a, b) => {
       if (filters.sortBy === "name") return a.name.localeCompare(b.name);
       if (filters.sortBy === "score") return (b.score ?? -1) - (a.score ?? -1);
@@ -362,7 +402,7 @@ const App = () => {
     });
   }, [filters, tastings]);
 
-  const activeFilterCount = [filters.minScore, filters.minHeat, filters.style, filters.date].filter(Boolean).length;
+  const activeFilterCount = [filters.minScore, filters.minHeat, filters.style, filters.ingredient, filters.date].filter(Boolean).length;
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -427,6 +467,9 @@ const App = () => {
     setImagePreview("");
     setImageBase64("");
     setImageMimeType("");
+    setBackImagePreview("");
+    setBackImageBase64("");
+    setBackImageMimeType("");
     setAudioUrl("");
     setAudioBase64("");
     setAudioMimeType("");
@@ -484,6 +527,58 @@ const App = () => {
     setImageMimeType("");
   };
 
+  const startBackCamera = async () => {
+    setErrorMessage("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      setBackCameraStream(stream);
+      setBackCameraActive(true);
+    } catch {
+      setErrorMessage("Camera access denied or unavailable.");
+    }
+  };
+
+  const stopBackCamera = () => {
+    backCameraStream?.getTracks().forEach((track) => track.stop());
+    if (backVideoRef.current) {
+      backVideoRef.current.srcObject = null;
+    }
+    setBackCameraStream(null);
+    setBackCameraActive(false);
+  };
+
+  const captureBackPhoto = async () => {
+    if (!backVideoRef.current) {
+      setErrorMessage("Camera preview is not ready.");
+      return;
+    }
+    const video = backVideoRef.current;
+    await waitForVideoReady(video);
+    const canvas = document.createElement("canvas");
+    const { width, height } = getVideoDimensions(video, backCameraStream);
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const base64Payload = dataUrl.split(",")[1] ?? "";
+    if (base64Payload.length < 100) {
+      setErrorMessage("Unable to capture photo. Try again.");
+      return;
+    }
+    setBackImagePreview(dataUrl);
+    setBackImageBase64(dataUrl);
+    setBackImageMimeType("image/jpeg");
+    stopBackCamera();
+  };
+
+  const clearBackPhoto = () => {
+    setBackImagePreview("");
+    setBackImageBase64("");
+    setBackImageMimeType("");
+  };
+
   const startRecording = async () => {
     setErrorMessage("");
     try {
@@ -523,7 +618,7 @@ const App = () => {
     setAudioMimeType("");
   };
 
-  const hasMedia = Boolean(imageBase64 || audioBase64);
+  const hasMedia = Boolean(imageBase64 || backImageBase64 || audioBase64);
   const hasManualData = Boolean(form.name.trim() || form.maker.trim());
 
   const handleSubmit = async (event: FormEvent) => {
@@ -553,6 +648,8 @@ const App = () => {
       productUrl: form.productUrl.trim() || undefined,
       imageBase64: imageBase64 || undefined,
       imageMimeType: imageMimeType || undefined,
+      backImageBase64: backImageBase64 || undefined,
+      backImageMimeType: backImageMimeType || undefined,
       voiceBase64: audioBase64 || undefined,
       voiceMimeType: audioMimeType || undefined
     };
@@ -768,6 +865,10 @@ const App = () => {
                 <input placeholder="e.g. Habanero" value={filters.style} onChange={(e) => setFilters((prev) => ({ ...prev, style: e.target.value }))} />
               </div>
               <div className="filter-field">
+                <label>Ingredient</label>
+                <input placeholder="e.g. Garlic" value={filters.ingredient} onChange={(e) => setFilters((prev) => ({ ...prev, ingredient: e.target.value }))} />
+              </div>
+              <div className="filter-field">
                 <label>Date</label>
                 <input type="date" value={filters.date} onChange={(e) => setFilters((prev) => ({ ...prev, date: e.target.value }))} />
               </div>
@@ -800,7 +901,7 @@ const App = () => {
 
               <div className="media-row">
                 <div className="media-capture">
-                  <span className="media-label">📷 Photo</span>
+                  <span className="media-label">📷 Front (Bottle)</span>
                   {imagePreview ? (
                     <div className="media-preview">
                       <img src={imagePreview} alt="Bottle" />
@@ -813,6 +914,25 @@ const App = () => {
                     </div>
                   ) : (
                     <button type="button" className="media-start" onClick={startCamera}>
+                      Open Camera
+                    </button>
+                  )}
+                </div>
+
+                <div className="media-capture">
+                  <span className="media-label">📷 Back (Label)</span>
+                  {backImagePreview ? (
+                    <div className="media-preview">
+                      <img src={backImagePreview} alt="Label" />
+                      <button type="button" className="media-clear" onClick={clearBackPhoto}>Remove</button>
+                    </div>
+                  ) : backCameraActive ? (
+                    <div className="camera-active">
+                      <video ref={backVideoRef} playsInline muted autoPlay />
+                      <button type="button" className="capture-btn" onClick={captureBackPhoto}>Capture</button>
+                    </div>
+                  ) : (
+                    <button type="button" className="media-start" onClick={startBackCamera}>
                       Open Camera
                     </button>
                   )}
@@ -1017,6 +1137,32 @@ const App = () => {
                     </div>
                   )}
                   {item.tastingNotesUser && <p className="card-notes">{item.tastingNotesUser}</p>}
+                  {item.ingredients && item.ingredients.length > 0 && (
+                    <div className="card-ingredients">
+                      <span className="card-ingredients-label">Ingredients:</span>
+                      <div className="ingredient-pills">
+                        {item.ingredients.slice(0, 6).map((ing, i) => (
+                          <span key={i} className="ingredient-pill">{ing}</span>
+                        ))}
+                        {item.ingredients.length > 6 && (
+                          <span className="ingredient-pill ingredient-more">+{item.ingredients.length - 6}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {item.nutritionFacts && (
+                    <details className="card-nutrition">
+                      <summary>Nutrition Facts</summary>
+                      <div className="nutrition-grid">
+                        {item.nutritionFacts.servingSize && <span>Serving: {item.nutritionFacts.servingSize}</span>}
+                        {item.nutritionFacts.calories !== undefined && <span>Calories: {item.nutritionFacts.calories}</span>}
+                        {item.nutritionFacts.sodium && <span>Sodium: {item.nutritionFacts.sodium}</span>}
+                        {item.nutritionFacts.totalCarbs && <span>Carbs: {item.nutritionFacts.totalCarbs}</span>}
+                        {item.nutritionFacts.sugars && <span>Sugars: {item.nutritionFacts.sugars}</span>}
+                        {item.nutritionFacts.protein && <span>Protein: {item.nutritionFacts.protein}</span>}
+                      </div>
+                    </details>
+                  )}
                   {item.productUrl && (
                     <a className="card-link" href={item.productUrl} target="_blank" rel="noreferrer">View Product</a>
                   )}

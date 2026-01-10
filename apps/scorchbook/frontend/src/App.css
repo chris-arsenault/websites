@@ -1541,3 +1541,73 @@
     font-size: 1.3rem;
   }
 }
+
+/* ===========================================
+   INGREDIENTS & NUTRITION
+   =========================================== */
+.card-ingredients {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.card-ingredients-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.ingredient-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ingredient-pill {
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+}
+
+.ingredient-pill.ingredient-more {
+  background: var(--border);
+  color: var(--muted);
+}
+
+.card-nutrition {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.card-nutrition summary {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.card-nutrition summary:hover {
+  color: var(--text);
+}
+
+.nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text);
+}
+
+.nutrition-grid span {
+  padding: 0.15rem 0;
+}

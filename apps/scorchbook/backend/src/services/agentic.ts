@@ -1,7 +1,7 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
 import { logInfo, logWarn } from "../utils/logger";
-import type { AgentEnrichment } from "../types";
+import type { AgentEnrichment, NutritionFacts } from "../types";
 
 const bedrockClient = new BedrockRuntimeClient({});
 const transcribeClient = new TranscribeClient({});
@@ -867,6 +867,36 @@ export const runImageExtraction = async (imageBase64: string, imageMimeType: str
     productUrl: typeof parsed.product_url === "string" ? parsed.product_url : undefined,
     keywords: Array.isArray(parsed.keywords) ? parsed.keywords.filter((item) => typeof item === "string") : undefined
   };
+};
+
+export type BackImageExtraction = {
+  nutritionFacts?: NutritionFacts;
+  ingredients?: string[];
+};
+
+export const runBackImageExtraction = async (imageBase64: string, imageMimeType: string): Promise<BackImageExtraction> => {
+  const instructions =
+    "You are a data extraction system for hot sauce nutrition labels and ingredient lists. Return JSON only with keys: nutrition_facts (object with serving_size, calories, total_fat, sodium, total_carbs, sugars, protein), ingredients (array of ingredient names in order listed). Use null for missing values. For ingredients, extract each ingredient as a separate string, removing parenthetical details.";
+  const payload = buildVisionPrompt(instructions, imageBase64, imageMimeType);
+  const text = await invokeClaude(payload);
+  const parsed = parseJsonFromText(text);
+  if (!parsed) {
+    return {};
+  }
+  const rawNutrition = parsed.nutrition_facts as Record<string, unknown> | undefined;
+  const nutritionFacts: NutritionFacts | undefined = rawNutrition ? {
+    servingSize: typeof rawNutrition.serving_size === "string" ? rawNutrition.serving_size : undefined,
+    calories: normalizeNumber(rawNutrition.calories) ?? undefined,
+    totalFat: typeof rawNutrition.total_fat === "string" ? rawNutrition.total_fat : undefined,
+    sodium: typeof rawNutrition.sodium === "string" ? rawNutrition.sodium : undefined,
+    totalCarbs: typeof rawNutrition.total_carbs === "string" ? rawNutrition.total_carbs : undefined,
+    sugars: typeof rawNutrition.sugars === "string" ? rawNutrition.sugars : undefined,
+    protein: typeof rawNutrition.protein === "string" ? rawNutrition.protein : undefined
+  } : undefined;
+  const ingredients = Array.isArray(parsed.ingredients)
+    ? parsed.ingredients.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : undefined;
+  return { nutritionFacts, ingredients };
 };
 
 const extractFromSearchResults = async (

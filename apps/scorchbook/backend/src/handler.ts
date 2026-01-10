@@ -8,6 +8,7 @@ import { downloadMediaBase64, parseBase64Data, uploadMedia } from "./services/me
 import {
   extractVoiceMetrics,
   formatTastingNotes,
+  runBackImageExtraction,
   runImageExtraction,
   runSearchEnrichment,
   transcribeVoice,
@@ -94,8 +95,10 @@ type ProcessEvent = {
   action: "process";
   recordId: string;
   imageKey?: string;
+  backImageKey?: string;
   voiceKey?: string;
   imageMimeType?: string;
+  backImageMimeType?: string;
   voiceMimeType?: string;
   forceSearch?: boolean;
   forceVoice?: boolean;
@@ -218,6 +221,22 @@ const processTastingAsync = async (payload: ProcessEvent) => {
       await updateRecordStatus(record, "image_enriched");
     }
 
+    if (payload.backImageKey) {
+      const media = await downloadMediaBase64(payload.backImageKey);
+      const backImageMimeType = media.contentType ?? payload.backImageMimeType ?? "image/jpeg";
+      const backExtraction = await runBackImageExtraction(media.base64, backImageMimeType);
+      applyEnrichment(record, {
+        nutritionFacts: backExtraction.nutritionFacts,
+        ingredients: backExtraction.ingredients
+      });
+      logInfo("agent.back.complete", {
+        recordId: record.id,
+        hasNutrition: !!backExtraction.nutritionFacts,
+        ingredientCount: backExtraction.ingredients?.length ?? 0
+      });
+      await updateRecordStatus(record, "back_extracted");
+    }
+
     if (payload.voiceKey) {
       const bucket = process.env.MEDIA_BUCKET;
       if (!bucket) {
@@ -308,18 +327,28 @@ export const handler = async (
       const record = buildRecord(parsed, nowIso, user.sub);
 
       const imagePayload = parseBase64Data(parsed.imageBase64, parsed.imageMimeType);
+      const backImagePayload = parseBase64Data(parsed.backImageBase64, parsed.backImageMimeType);
       const voicePayload = parseBase64Data(parsed.voiceBase64, parsed.voiceMimeType);
       const agentImageMimeType = normalizeMimeType(imagePayload?.contentType ?? parsed.imageMimeType);
+      const agentBackImageMimeType = normalizeMimeType(backImagePayload?.contentType ?? parsed.backImageMimeType);
       const agentVoiceMimeType = normalizeMimeType(voicePayload?.contentType ?? parsed.voiceMimeType);
 
       let imageUrl: string | undefined;
       let imageKey: string | undefined;
+      let backImageUrl: string | undefined;
+      let backImageKey: string | undefined;
       let voiceKey: string | undefined;
 
       if (imagePayload) {
         const ext = imagePayload.contentType.split("/")[1] ?? "jpg";
         imageKey = `images/${record.id}-${Date.now()}.${ext}`;
         imageUrl = await uploadMedia(imageKey, imagePayload);
+      }
+
+      if (backImagePayload) {
+        const ext = backImagePayload.contentType.split("/")[1] ?? "jpg";
+        backImageKey = `images/${record.id}-back-${Date.now()}.${ext}`;
+        backImageUrl = await uploadMedia(backImageKey, backImagePayload);
       }
 
       if (voicePayload) {
@@ -331,6 +360,8 @@ export const handler = async (
 
       record.imageUrl = imageUrl;
       record.imageKey = imageKey;
+      record.backImageUrl = backImageUrl;
+      record.backImageKey = backImageKey;
       record.voiceKey = voiceKey;
 
       await createTasting(record);
@@ -339,8 +370,10 @@ export const handler = async (
           action: "process",
           recordId: record.id,
           imageKey,
+          backImageKey,
           voiceKey,
           imageMimeType: agentImageMimeType,
+          backImageMimeType: agentBackImageMimeType,
           voiceMimeType: agentVoiceMimeType
         });
       } catch (error) {
@@ -379,13 +412,14 @@ export const handler = async (
       if (record.createdBy && record.createdBy !== user.sub) {
         return jsonResponse(403, { message: "Forbidden" }, corsHeaders);
       }
-      if (!record.imageKey && !record.voiceKey) {
+      if (!record.imageKey && !record.backImageKey && !record.voiceKey) {
         return jsonResponse(400, { message: "No media available to process" }, corsHeaders);
       }
 
       await updateRecordStatus(record, "pending");
 
       const imageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.imageKey));
+      const backImageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.backImageKey));
       const voiceMimeType = normalizeMimeType(inferMimeTypeFromKey(record.voiceKey));
 
       try {
@@ -393,8 +427,10 @@ export const handler = async (
           action: "process",
           recordId: record.id,
           imageKey: record.imageKey,
+          backImageKey: record.backImageKey,
           voiceKey: record.voiceKey,
           imageMimeType,
+          backImageMimeType,
           voiceMimeType,
           forceSearch: true,
           forceVoice: true

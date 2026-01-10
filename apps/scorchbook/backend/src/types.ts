@@ -2,11 +2,22 @@ export type ProcessingStatus =
   | "pending"
   | "image_extracted"
   | "image_enriched"
+  | "back_extracted"
   | "voice_transcribed"
   | "voice_extracted"
   | "notes_formatted"
   | "complete"
   | "error";
+
+export type NutritionFacts = {
+  servingSize?: string;
+  calories?: number;
+  totalFat?: string;
+  sodium?: string;
+  totalCarbs?: string;
+  sugars?: string;
+  protein?: string;
+};
 
 export type TastingRecord = {
   id: string;
@@ -28,6 +39,10 @@ export type TastingRecord = {
   productUrl: string;
   imageUrl?: string;
   imageKey?: string;
+  backImageUrl?: string;
+  backImageKey?: string;
+  nutritionFacts?: NutritionFacts;
+  ingredients?: string[];
   voiceKey?: string;
   voiceTranscript?: string;
   createdBy?: string;
@@ -46,6 +61,8 @@ export type CreateTastingInput = {
   productUrl?: string;
   imageBase64?: string;
   imageMimeType?: string;
+  backImageBase64?: string;
+  backImageMimeType?: string;
   voiceBase64?: string;
   voiceMimeType?: string;
 };

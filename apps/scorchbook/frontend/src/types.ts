@@ -1,3 +1,13 @@
+export type NutritionFacts = {
+  servingSize?: string;
+  calories?: number;
+  totalFat?: string;
+  sodium?: string;
+  totalCarbs?: string;
+  sugars?: string;
+  protein?: string;
+};
+
 export type TastingRecord = {
   id: string;
   createdAt: string;
@@ -16,6 +26,10 @@ export type TastingRecord = {
   productUrl: string;
   imageUrl?: string;
   imageKey?: string;
+  backImageUrl?: string;
+  backImageKey?: string;
+  nutritionFacts?: NutritionFacts;
+  ingredients?: string[];
   voiceKey?: string;
   voiceTranscript?: string;
   createdBy?: string;
@@ -36,6 +50,8 @@ export type CreateTastingInput = {
   productUrl?: string;
   imageBase64?: string;
   imageMimeType?: string;
+  backImageBase64?: string;
+  backImageMimeType?: string;
   voiceBase64?: string;
   voiceMimeType?: string;
 };
@@ -43,6 +59,7 @@ export type CreateTastingInput = {
 export type Filters = {
   search: string;
   style: string;
+  ingredient: string;
   minScore: string;
   minHeat: string;
   date: string;
