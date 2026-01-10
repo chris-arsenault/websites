@@ -31,6 +31,16 @@ output "all_sites" {
       domain_name       = module.hotsauce_site.domain_name
       local_path        = "apps/hotsauce/frontend/dist"
     }
+    (local.stack_atlas_hostname) = {
+      url               = module.stack_atlas_site.website_url
+      hostname          = module.stack_atlas_site.hostname
+      s3_bucket         = module.stack_atlas_site.s3_bucket_name
+      cloudfront_id     = module.stack_atlas_site.cloudfront_distribution_id
+      cloudfront_domain = module.stack_atlas_site.cloudfront_domain_name
+      site_name         = module.stack_atlas_site.site_name
+      domain_name       = module.stack_atlas_site.domain_name
+      local_path        = "apps/stack-atlas/dist"
+    }
   }
 }
 
