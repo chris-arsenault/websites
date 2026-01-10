@@ -51,7 +51,7 @@ resource "aws_route53_record" "cert_validation" {
     for dvo in aws_acm_certificate.domain.domain_validation_options : dvo.resource_record_type
     if dvo.domain_name == each.value
   ])
-  ttl     = 300
+  ttl = 300
   records = [one([
     for dvo in aws_acm_certificate.domain.domain_validation_options : dvo.resource_record_value
     if dvo.domain_name == each.value
@@ -80,11 +80,11 @@ resource "aws_route53_record" "domain" {
 }
 
 resource "aws_cognito_user_pool_client" "clients" {
-  for_each    = var.clients
-  name        = each.value
+  for_each     = var.clients
+  name         = each.value
   user_pool_id = aws_cognito_user_pool.pool.id
 
-  generate_secret = false
+  generate_secret     = false
   explicit_auth_flows = local.default_auth_flows
 
   supported_identity_providers = ["COGNITO"]

@@ -51,10 +51,10 @@ data "aws_iam_policy_document" "hotsauce_lambda" {
 module "hotsauce_api" {
   source = "./modules/api-http"
 
-  name                = local.hotsauce_name_prefix
-  lambda_entry_path   = "${path.module}/../../apps/hotsauce/backend/dist/handler.js"
-  lambda_runtime      = "nodejs18.x"
-  lambda_handler      = "handler.handler"
+  name              = local.hotsauce_name_prefix
+  lambda_entry_path = "${path.module}/../../apps/hotsauce/backend/dist/handler.js"
+  lambda_runtime    = "nodejs18.x"
+  lambda_handler    = "handler.handler"
   lambda_environment = {
     TABLE_NAME            = module.hotsauce_table.name
     MEDIA_BUCKET          = module.hotsauce_media.bucket
@@ -64,11 +64,11 @@ module "hotsauce_api" {
     ALLOWED_ORIGINS       = join(",", local.hotsauce_allowed_origins)
     TAVILY_API_KEY        = data.aws_secretsmanager_secret_version.tavily.secret_string
   }
-  iam_policy_json       = data.aws_iam_policy_document.hotsauce_lambda.json
-  routes                = ["GET /tastings", "POST /tastings", "POST /tastings/{id}/rerun", "DELETE /tastings/{id}"]
-  cors_allow_origins     = local.hotsauce_allowed_origins
-  custom_domain_name     = local.hotsauce_api_domain
-  domain_zone_name       = local.hotsauce_domain_name
+  iam_policy_json    = data.aws_iam_policy_document.hotsauce_lambda.json
+  routes             = ["GET /tastings", "POST /tastings", "POST /tastings/{id}/rerun", "DELETE /tastings/{id}"]
+  cors_allow_origins = local.hotsauce_allowed_origins
+  custom_domain_name = local.hotsauce_api_domain
+  domain_zone_name   = local.hotsauce_domain_name
 }
 
 module "hotsauce_site" {

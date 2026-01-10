@@ -14,7 +14,7 @@ locals {
     "https://${local.hotsauce_hostname}"
   ]
 
-  hotsauce_name_prefix   = "hotsauce-ffcf7631"
+  hotsauce_name_prefix     = "hotsauce-ffcf7631"
   hotsauce_frontend_bucket = "${local.hotsauce_name_prefix}-frontend"
   hotsauce_media_bucket    = "${local.hotsauce_name_prefix}-media"
   hotsauce_table_name      = "${local.hotsauce_name_prefix}-tastings"

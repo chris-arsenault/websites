@@ -1,12 +1,12 @@
 data "aws_region" "current" {}
 
 locals {
-  ru_ai_site_name           = "ru-ai"
-  ru_ai_project_prefix      = "websites"
-  ru_ai_resource_prefix     = "${local.ru_ai_project_prefix}-${local.ru_ai_site_name}"
-  ru_ai_api_name            = "${local.ru_ai_resource_prefix}-bedrock-proxy"
+  ru_ai_site_name             = "ru-ai"
+  ru_ai_project_prefix        = "websites"
+  ru_ai_resource_prefix       = "${local.ru_ai_project_prefix}-${local.ru_ai_site_name}"
+  ru_ai_api_name              = "${local.ru_ai_resource_prefix}-bedrock-proxy"
   ru_ai_rate_limit_per_minute = 10
-  ru_ai_bedrock_model_id    = "anthropic.claude-3-haiku-20240307-v1:0"
+  ru_ai_bedrock_model_id      = "anthropic.claude-3-haiku-20240307-v1:0"
   ru_ai_tags = {
     Project   = "Websites"
     ManagedBy = "Terraform"
@@ -76,18 +76,18 @@ data "aws_iam_policy_document" "ru_ai_lambda" {
 module "ru_ai_api" {
   source = "./modules/api-http"
 
-  name                = local.ru_ai_api_name
-  lambda_entry_path   = "${path.module}/../../apps/ru-ai.net/backend/lambda_function.py"
-  lambda_runtime      = "python3.12"
-  lambda_handler      = "lambda_function.handler"
+  name              = local.ru_ai_api_name
+  lambda_entry_path = "${path.module}/../../apps/ru-ai.net/backend/lambda_function.py"
+  lambda_runtime    = "python3.12"
+  lambda_handler    = "lambda_function.handler"
   lambda_environment = {
     TABLE_NAME            = aws_dynamodb_table.ru_ai_rate_limits.name
     RATE_LIMIT_PER_MINUTE = tostring(local.ru_ai_rate_limit_per_minute)
     MODEL_ID              = aws_bedrock_inference_profile.ru_ai_model_instance_profile.arn
     BEDROCK_REGION        = data.aws_region.current.id
   }
-  iam_policy_json   = data.aws_iam_policy_document.ru_ai_lambda.json
-  routes            = ["POST /invoke"]
+  iam_policy_json    = data.aws_iam_policy_document.ru_ai_lambda.json
+  routes             = ["POST /invoke"]
   cors_allow_origins = ["*"]
   custom_domain_name = local.ru_ai_api_domain
   domain_zone_name   = local.ru_ai_domain_name
