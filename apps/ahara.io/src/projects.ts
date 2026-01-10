@@ -68,15 +68,15 @@ export const projects: Project[] = [
   },
   // Minor Projects
   {
-    id: 'hotsauce',
+    id: 'scorchbook',
     name: 'Scorchbook',
-    domain: 'hotsauce.tsonu.com',
+    domain: 'scorchbook.tsonu.com',
     description: 'A hot sauce collection tracker and rating app. Snap photos, record tasting notes, and track your spicy adventures with AI-assisted cataloging.',
     status: 'active',
     category: 'minor',
     tags: ['app', 'food', 'ai'],
-    productUrl: 'https://hotsauce.tsonu.com',
-    repoUrl: 'https://github.com/chris-arsenault/websites/tree/main/apps/hotsauce',
+    productUrl: 'https://scorchbook.tsonu.com',
+    repoUrl: 'https://github.com/chris-arsenault/websites/tree/main/apps/scorchbook',
     lastUpdated: '2026-01-09',
     features: [
       'Photo and audio capture for tastings',

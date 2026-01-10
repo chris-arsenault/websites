@@ -21,15 +21,15 @@ output "all_sites" {
       domain_name       = module.ru_ai_site.domain_name
       local_path        = "apps/ru-ai.net/static"
     }
-    (local.hotsauce_hostname) = {
-      url               = module.hotsauce_site.website_url
-      hostname          = module.hotsauce_site.hostname
-      s3_bucket         = module.hotsauce_site.s3_bucket_name
-      cloudfront_id     = module.hotsauce_site.cloudfront_distribution_id
-      cloudfront_domain = module.hotsauce_site.cloudfront_domain_name
-      site_name         = module.hotsauce_site.site_name
-      domain_name       = module.hotsauce_site.domain_name
-      local_path        = "apps/hotsauce/frontend/dist"
+    (local.scorchbook_hostname) = {
+      url               = module.scorchbook_site.website_url
+      hostname          = module.scorchbook_site.hostname
+      s3_bucket         = module.scorchbook_site.s3_bucket_name
+      cloudfront_id     = module.scorchbook_site.cloudfront_distribution_id
+      cloudfront_domain = module.scorchbook_site.cloudfront_domain_name
+      site_name         = module.scorchbook_site.site_name
+      domain_name       = module.scorchbook_site.domain_name
+      local_path        = "apps/scorchbook/frontend/dist"
     }
     (local.stack_atlas_hostname) = {
       url               = module.stack_atlas_site.website_url

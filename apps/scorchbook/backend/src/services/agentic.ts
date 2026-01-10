@@ -522,7 +522,7 @@ const fetchPageHtml = async (url: string): Promise<string | null> => {
   try {
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "hotsauce-agent/1.0",
+        "User-Agent": "scorchbook-agent/1.0",
         Accept: "text/html,application/xhtml+xml"
       },
       signal: controller.signal
@@ -1142,7 +1142,7 @@ const mapMediaFormat = (mimeType: string): "mp3" | "mp4" | "wav" | "flac" | "ogg
 };
 
 export const transcribeVoice = async (s3Uri: string, mimeType: string): Promise<string> => {
-  const jobName = `hotsauce-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const jobName = `scorchbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const startCommand = new StartTranscriptionJobCommand({
     TranscriptionJobName: jobName,
     LanguageCode: transcribeLanguage,
