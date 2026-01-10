@@ -6,7 +6,7 @@ This repo is a small collection of production-only personal websites. Keep chang
 
 - `apps/ahara.io`: Vite + React static site deployed to S3 + CloudFront.
 - `apps/scorchbook`: Scorchbook with a Vite + React frontend and a Node.js Lambda backend.
-- `apps/ru-ai.net`: Static site with a small Python Lambda backend.
+- `apps/ru-ai.net`: Static site with a small Node.js Lambda backend.
 - `apps/stack-atlas`: Stack Atlas Vite + React static site.
 
 ## Architecture

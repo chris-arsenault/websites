@@ -53,7 +53,7 @@ module "scorchbook_api" {
 
   name              = local.scorchbook_name_prefix
   lambda_entry_path = "${path.module}/../../apps/scorchbook/backend/dist/handler.js"
-  lambda_runtime    = "nodejs18.x"
+  lambda_runtime    = "nodejs24.x"
   lambda_handler    = "handler.handler"
   lambda_environment = {
     TABLE_NAME            = module.scorchbook_table.name

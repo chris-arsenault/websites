@@ -77,9 +77,9 @@ module "ru_ai_api" {
   source = "./modules/api-http"
 
   name              = local.ru_ai_api_name
-  lambda_entry_path = "${path.module}/../../apps/ru-ai.net/backend/lambda_function.py"
-  lambda_runtime    = "python3.12"
-  lambda_handler    = "lambda_function.handler"
+  lambda_entry_path = "${path.module}/../../apps/ru-ai.net/backend/handler.js"
+  lambda_runtime    = "nodejs24.x"
+  lambda_handler    = "handler.handler"
   lambda_environment = {
     TABLE_NAME            = aws_dynamodb_table.ru_ai_rate_limits.name
     RATE_LIMIT_PER_MINUTE = tostring(local.ru_ai_rate_limit_per_minute)

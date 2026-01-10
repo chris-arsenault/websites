@@ -9,7 +9,7 @@ variable "lambda_entry_path" {
 }
 
 variable "lambda_runtime" {
-  description = "Lambda runtime (e.g., nodejs18.x, python3.12)"
+  description = "Lambda runtime (e.g., nodejs24.x, python3.12)"
   type        = string
 }
 
