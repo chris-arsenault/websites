@@ -11,7 +11,7 @@ resource "aws_route53_record" "cert_validation" {
     for dvo in aws_acm_certificate.website.domain_validation_options : dvo.resource_record_value
     if dvo.domain_name == each.value
   ])]
-  ttl  = 60
+  ttl = 60
   type = one([
     for dvo in aws_acm_certificate.website.domain_validation_options : dvo.resource_record_type
     if dvo.domain_name == each.value

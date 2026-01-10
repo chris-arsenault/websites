@@ -24,8 +24,8 @@ data "aws_iam_policy_document" "lambda_assume" {
 }
 
 resource "aws_iam_role" "lambda" {
-  name                 = "${local.safe_name}-lambda"
-  assume_role_policy   = data.aws_iam_policy_document.lambda_assume.json
+  name               = "${local.safe_name}-lambda"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume.json
 
   tags = local.default_tags
 }
@@ -62,8 +62,8 @@ resource "aws_lambda_function" "api" {
 
 data "aws_iam_policy_document" "lambda_self_invoke" {
   statement {
-    effect = "Allow"
-    actions = ["lambda:InvokeFunction"]
+    effect    = "Allow"
+    actions   = ["lambda:InvokeFunction"]
     resources = [aws_lambda_function.api.arn]
   }
 }
@@ -98,9 +98,9 @@ resource "aws_apigatewayv2_integration" "api" {
 resource "aws_apigatewayv2_route" "routes" {
   for_each = toset(var.routes)
 
-  api_id   = aws_apigatewayv2_api.api.id
+  api_id    = aws_apigatewayv2_api.api.id
   route_key = each.value
-  target   = "integrations/${aws_apigatewayv2_integration.api.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.api.id}"
 }
 
 resource "aws_apigatewayv2_stage" "api" {
@@ -141,7 +141,7 @@ resource "aws_route53_record" "cert_validation" {
     for dvo in aws_acm_certificate.api.domain_validation_options : dvo.resource_record_type
     if dvo.domain_name == each.value
   ])
-  ttl     = 300
+  ttl = 300
   records = [one([
     for dvo in aws_acm_certificate.api.domain_validation_options : dvo.resource_record_value
     if dvo.domain_name == each.value

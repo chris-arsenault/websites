@@ -30,11 +30,11 @@ resource "aws_s3_bucket_versioning" "website" {
 resource "aws_s3_object" "website_files" {
   for_each = local.site_files
 
-  bucket       = aws_s3_bucket.website.id
-  key          = each.key
-  source       = "${var.site_directory_path}/${each.key}"
-  source_hash  = filemd5("${var.site_directory_path}/${each.key}")
-  content_type = local.mime_types[regex("\\.[^.]+$", each.key)]
+  bucket        = aws_s3_bucket.website.id
+  key           = each.key
+  source        = "${var.site_directory_path}/${each.key}"
+  source_hash   = filemd5("${var.site_directory_path}/${each.key}")
+  content_type  = local.mime_types[regex("\\.[^.]+$", each.key)]
   cache_control = "public, max-age=3600"
 
   tags = merge(local.default_tags, {
@@ -68,9 +68,9 @@ resource "aws_s3_bucket_policy" "website" {
 }
 
 resource "aws_s3_object" "config" {
-  bucket       = aws_s3_bucket.website.id
-  key          = "config.js"
-  content_type = "application/javascript"
+  bucket        = aws_s3_bucket.website.id
+  key           = "config.js"
+  content_type  = "application/javascript"
   cache_control = "no-cache"
 
   content = <<-EOT

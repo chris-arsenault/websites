@@ -1,6 +1,6 @@
 locals {
-  project_prefix = "websites"
-  site_name      = element(split(".", var.hostname), 0)
+  project_prefix  = "websites"
+  site_name       = element(split(".", var.hostname), 0)
   resource_prefix = "${local.project_prefix}-${local.site_name}"
   bucket_name     = "${local.resource_prefix}-${replace(var.hostname, ".", "-")}"
 
@@ -17,22 +17,22 @@ locals {
   }
 
   mime_types = {
-    ".html" = "text/html"
-    ".css"  = "text/css"
-    ".js"   = "application/javascript"
-    ".json" = "application/json"
-    ".svg"  = "image/svg+xml"
-    ".png"  = "image/png"
-    ".jpg"  = "image/jpeg"
-    ".jpeg" = "image/jpeg"
-    ".gif"  = "image/gif"
-    ".ico"  = "image/x-icon"
-    ".xml"  = "application/xml"
-    ".txt"  = "text/plain"
-    ".pdf"  = "application/pdf"
-    ".woff" = "font/woff"
+    ".html"  = "text/html"
+    ".css"   = "text/css"
+    ".js"    = "application/javascript"
+    ".json"  = "application/json"
+    ".svg"   = "image/svg+xml"
+    ".png"   = "image/png"
+    ".jpg"   = "image/jpeg"
+    ".jpeg"  = "image/jpeg"
+    ".gif"   = "image/gif"
+    ".ico"   = "image/x-icon"
+    ".xml"   = "application/xml"
+    ".txt"   = "text/plain"
+    ".pdf"   = "application/pdf"
+    ".woff"  = "font/woff"
     ".woff2" = "font/woff2"
-    ".ttf"  = "font/ttf"
-    ".eot"  = "application/vnd.ms-fontobject"
+    ".ttf"   = "font/ttf"
+    ".eot"   = "application/vnd.ms-fontobject"
   }
 }

@@ -1,5 +1,5 @@
 locals {
-  site_name = element(split(".", var.hostname), 0)
+  site_name       = element(split(".", var.hostname), 0)
   resource_prefix = trimsuffix(var.bucket_name, "-frontend")
   default_tags = {
     Project   = "Websites"
@@ -14,22 +14,22 @@ locals {
   }
 
   mime_types = {
-    ".html" = "text/html"
-    ".css"  = "text/css"
-    ".js"   = "application/javascript"
-    ".json" = "application/json"
-    ".svg"  = "image/svg+xml"
-    ".png"  = "image/png"
-    ".jpg"  = "image/jpeg"
-    ".jpeg" = "image/jpeg"
-    ".gif"  = "image/gif"
-    ".ico"  = "image/x-icon"
-    ".xml"  = "application/xml"
-    ".txt"  = "text/plain"
-    ".pdf"  = "application/pdf"
-    ".woff" = "font/woff"
+    ".html"  = "text/html"
+    ".css"   = "text/css"
+    ".js"    = "application/javascript"
+    ".json"  = "application/json"
+    ".svg"   = "image/svg+xml"
+    ".png"   = "image/png"
+    ".jpg"   = "image/jpeg"
+    ".jpeg"  = "image/jpeg"
+    ".gif"   = "image/gif"
+    ".ico"   = "image/x-icon"
+    ".xml"   = "application/xml"
+    ".txt"   = "text/plain"
+    ".pdf"   = "application/pdf"
+    ".woff"  = "font/woff"
     ".woff2" = "font/woff2"
-    ".ttf"  = "font/ttf"
-    ".eot"  = "application/vnd.ms-fontobject"
+    ".ttf"   = "font/ttf"
+    ".eot"   = "application/vnd.ms-fontobject"
   }
 }

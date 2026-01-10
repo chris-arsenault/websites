@@ -1,16 +1,8 @@
-name: Deploy Static Websites
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'infrastructure/**'
-      - 'apps/**'
-  pull_request:
-    branches:
-      - main
-    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -18,84 +10,24 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  id-token: write   # required for OIDC
+  id-token: write
   contents: read
 
-env:
-  TF_VERSION: '1.14.0'
-  AWS_REGION: 'us-east-1'
-
 jobs:
-  terraform:
-    name: Terraform
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Build hotsauce backend
-        run: |
-          cd apps/hotsauce/backend
-          npm ci
-          npm run build
-
-      - name: Build hotsauce frontend
-        run: |
-          cd apps/hotsauce/frontend
-          npm ci
-          npm run build
-
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v5
+          node-version: "20"
+      - uses: hashicorp/setup-terraform@v3
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE }}
           role-session-name: GitHubActions-${{ github.run_id }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Terraform Init
+          aws-region: us-east-1
+      - name: Deploy
         env:
-          TF_CLI_ARGS: -no-color
-        run: |
-          cd infrastructure/terraform
-          terraform init \
-            -backend-config bucket=${{ secrets.STATE_BUCKET }} \
-            -backend-config region=${{ env.AWS_REGION }}
-
-      - name: Terraform Format Check
-        env:
-          TF_CLI_ARGS: -no-color
-        run: |
-          cd infrastructure/terraform
-          terraform fmt -check -recursive
-        continue-on-error: true
-
-      - name: Terraform Validate
-        env:
-          TF_CLI_ARGS: -no-color
-        run: |
-          cd infrastructure/terraform
-          terraform validate
-
-      - name: Terraform Plan
-        id: tf-plan
-        env:
-          TF_CLI_ARGS: -no-color
-          TF_VAR_permissions_boundary_arn: ${{ secrets.PB_ARN }}
-        run: |
-          cd infrastructure/terraform
-          terraform plan -input=false -out=tfplan
-
-      - name: Terraform Apply
-        id: tf-apply
-        if: github.ref == 'refs/heads/main'
-        env:
-          TF_CLI_ARGS: -no-color
-        run: |
-          cd infrastructure/terraform
-          terraform apply -auto-approve tfplan
+          STATE_BUCKET: ${{ secrets.STATE_BUCKET }}
+        run: bash scripts/deploy.sh
