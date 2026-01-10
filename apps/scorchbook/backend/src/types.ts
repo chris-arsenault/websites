@@ -1,12 +1,14 @@
 export type ProcessingStatus =
   | "pending"
   | "image_extracted"
-  | "back_extracted"
+  | "ingredients_extracted"
+  | "nutrition_extracted"
   | "voice_transcribed"
   | "voice_extracted"
   | "notes_formatted"
   | "complete"
-  | "error";
+  | "error"
+  | "back_extracted";
 
 export type ProductType = "sauce" | "drink";
 
@@ -45,8 +47,10 @@ export type TastingRecord = {
   productUrl: string;
   imageUrl?: string;
   imageKey?: string;
-  backImageUrl?: string;
-  backImageKey?: string;
+  ingredientsImageUrl?: string;
+  ingredientsImageKey?: string;
+  nutritionImageUrl?: string;
+  nutritionImageKey?: string;
   nutritionFacts?: NutritionFacts;
   ingredients?: string[];
   voiceKey?: string;
@@ -69,10 +73,21 @@ export type CreateTastingInput = {
   productUrl?: string;
   imageBase64?: string;
   imageMimeType?: string;
-  backImageBase64?: string;
-  backImageMimeType?: string;
+  ingredientsImageBase64?: string;
+  ingredientsImageMimeType?: string;
+  nutritionImageBase64?: string;
+  nutritionImageMimeType?: string;
   voiceBase64?: string;
   voiceMimeType?: string;
+};
+
+export type UpdateTastingMediaInput = {
+  imageBase64?: string;
+  imageMimeType?: string;
+  ingredientsImageBase64?: string;
+  ingredientsImageMimeType?: string;
+  nutritionImageBase64?: string;
+  nutritionImageMimeType?: string;
 };
 
 export type AgentEnrichment = {

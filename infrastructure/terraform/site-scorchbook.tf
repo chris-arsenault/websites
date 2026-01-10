@@ -65,7 +65,13 @@ module "scorchbook_api" {
     TAVILY_API_KEY        = data.aws_secretsmanager_secret_version.tavily.secret_string
   }
   iam_policy_json    = data.aws_iam_policy_document.scorchbook_lambda.json
-  routes             = ["GET /tastings", "POST /tastings", "POST /tastings/{id}/rerun", "DELETE /tastings/{id}"]
+  routes             = [
+    "GET /tastings",
+    "POST /tastings",
+    "POST /tastings/{id}/media",
+    "POST /tastings/{id}/rerun",
+    "DELETE /tastings/{id}"
+  ]
   cors_allow_origins = local.scorchbook_allowed_origins
   custom_domain_name = local.scorchbook_api_domain
   domain_zone_name   = local.scorchbook_domain_name

@@ -25,20 +25,17 @@ export type TastingRecord = {
   // Sauce-specific
   heatUser: number | null;
   heatVendor: number | null;
-  // Drink-specific
-  refreshing: number | null;
-  sweet: number | null;
   tastingNotesUser: string;
   tastingNotesVendor: string;
   productUrl: string;
   imageUrl?: string;
   imageKey?: string;
-  backImageUrl?: string;
-  backImageKey?: string;
+  ingredientsImageUrl?: string;
+  ingredientsImageKey?: string;
+  nutritionImageUrl?: string;
+  nutritionImageKey?: string;
   nutritionFacts?: NutritionFacts;
   ingredients?: string[];
-  voiceKey?: string;
-  voiceTranscript?: string;
   createdBy?: string;
   needsAttention?: boolean;
   attentionReason?: string;
@@ -52,17 +49,26 @@ export type CreateTastingInput = {
   style?: string;
   heatUser?: number | null;
   heatVendor?: number | null;
-  refreshing?: number | null;
-  sweet?: number | null;
   tastingNotesUser?: string;
   tastingNotesVendor?: string;
   productUrl?: string;
   imageBase64?: string;
   imageMimeType?: string;
-  backImageBase64?: string;
-  backImageMimeType?: string;
+  ingredientsImageBase64?: string;
+  ingredientsImageMimeType?: string;
+  nutritionImageBase64?: string;
+  nutritionImageMimeType?: string;
   voiceBase64?: string;
   voiceMimeType?: string;
+};
+
+export type UpdateTastingMediaInput = {
+  imageBase64?: string;
+  imageMimeType?: string;
+  ingredientsImageBase64?: string;
+  ingredientsImageMimeType?: string;
+  nutritionImageBase64?: string;
+  nutritionImageMimeType?: string;
 };
 
 export type Filters = {

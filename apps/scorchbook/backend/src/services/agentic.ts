@@ -886,13 +886,47 @@ Use null for any field you cannot determine.`;
   };
 };
 
-export type BackImageExtraction = {
-  nutritionFacts?: NutritionFacts;
+export type IngredientsExtraction = {
   ingredients?: string[];
 };
 
-export const runBackImageExtraction = async (imageBase64: string, imageMimeType: string): Promise<BackImageExtraction> => {
-  const instructions = `Extract nutrition facts and ingredients from this hot sauce label image.
+export const runIngredientsExtraction = async (
+  imageBase64: string,
+  imageMimeType: string
+): Promise<IngredientsExtraction> => {
+  const instructions = `Extract the ingredients list from this hot sauce label image.
+
+Return JSON with exactly these keys:
+{
+  "ingredients": ["ingredient1", "ingredient2", ...]
+}
+
+Guidelines:
+- Find the ingredients list (usually starts with "Ingredients:")
+- List each ingredient separately, in order shown on label
+- Simplify ingredient names: "Red Habanero Peppers" not "Red Habanero Peppers (Capsicum chinense)"
+- If no ingredients list visible, set ingredients to empty array`;
+  const payload = buildVisionPrompt(instructions, imageBase64, imageMimeType);
+  const text = await invokeClaude(payload);
+  const parsed = parseJsonFromText(text);
+  if (!parsed) {
+    return {};
+  }
+  const ingredients = Array.isArray(parsed.ingredients)
+    ? parsed.ingredients.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : undefined;
+  return { ingredients };
+};
+
+export type NutritionExtraction = {
+  nutritionFacts?: NutritionFacts;
+};
+
+export const runNutritionFactsExtraction = async (
+  imageBase64: string,
+  imageMimeType: string
+): Promise<NutritionExtraction> => {
+  const instructions = `Extract nutrition facts from this hot sauce label image.
 
 Return JSON with exactly these keys:
 {
@@ -904,19 +938,14 @@ Return JSON with exactly these keys:
     "total_carbs": "e.g. 1g",
     "sugars": "e.g. 0g",
     "protein": "e.g. 0g"
-  },
-  "ingredients": ["ingredient1", "ingredient2", ...]
+  }
 }
 
 Guidelines:
 - Look for "Nutrition Facts" panel - extract serving size and per-serving values
 - Include units with values (mg, g, etc.) except calories which is just a number
-- For ingredients, find the ingredients list (usually starts with "Ingredients:")
-- List each ingredient separately, in order shown on label
-- Simplify ingredient names: "Red Habanero Peppers" not "Red Habanero Peppers (Capsicum chinense)"
 - Use null for any nutrition value not visible or legible
-- If no nutrition panel visible, set nutrition_facts to null
-- If no ingredients list visible, set ingredients to empty array`;
+- If no nutrition panel visible, set nutrition_facts to null`;
   const payload = buildVisionPrompt(instructions, imageBase64, imageMimeType);
   const text = await invokeClaude(payload);
   const parsed = parseJsonFromText(text);
@@ -933,10 +962,7 @@ Guidelines:
     sugars: typeof rawNutrition.sugars === "string" ? rawNutrition.sugars : undefined,
     protein: typeof rawNutrition.protein === "string" ? rawNutrition.protein : undefined
   } : undefined;
-  const ingredients = Array.isArray(parsed.ingredients)
-    ? parsed.ingredients.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-    : undefined;
-  return { nutritionFacts, ingredients };
+  return { nutritionFacts };
 };
 
 const extractFromSearchResults = async (
@@ -1314,17 +1340,24 @@ const formatNotesLabel = (label: string) => {
     .trim();
 };
 
+const formatBulletLines = (lines: string[]): string => {
+  const cleaned = lines
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => (/^[-•]/.test(line) ? line : `- ${line}`));
+  return cleaned.join("\n");
+};
+
 const notesToString = (value: unknown): string => {
   if (typeof value === "string") {
-    return value;
+    return formatBulletLines(value.split(/\n+/));
   }
   if (!value) {
     return "";
   }
   if (Array.isArray(value)) {
-    return value
-      .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-      .join("\n");
+    const lines = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+    return formatBulletLines(lines);
   }
   if (typeof value !== "object") {
     return "";
@@ -1335,27 +1368,13 @@ const notesToString = (value: unknown): string => {
   if (!entries.length) {
     return "";
   }
-  const preferredOrder = ["flavor", "aroma", "texture", "heat", "pairings", "finish"];
-  const weighted = entries.map(([key, val]) => ({
-    key,
-    label: formatNotesLabel(key),
-    value: val as string,
-    weight: preferredOrder.indexOf(key.toLowerCase())
-  }));
-  weighted.sort((a, b) => {
-    if (a.weight === -1 && b.weight === -1) {
-      return 0;
-    }
-    if (a.weight === -1) return 1;
-    if (b.weight === -1) return -1;
-    return a.weight - b.weight;
-  });
-  return weighted.map((entry) => `${entry.label}: ${entry.value.trim()}`).join("\n");
+  const lines = entries.map(([key, val]) => `${formatNotesLabel(key)}: ${(val as string).trim()}`);
+  return formatBulletLines(lines);
 };
 
 const runNotesLlm = async (transcript: string): Promise<string> => {
   const instructions =
-    "Rewrite this transcript into clean tasting notes. Output JSON only with key: tasting_notes_user as a single string. Use short labeled lines if relevant: Flavor, Aroma, Texture, Heat, Pairings, Finish. Remove numeric ratings or scores; do not include numbers like 8/10. Remove filler words like um/uh. Keep descriptive text even if informal. If the transcript contains no tasting notes, return an empty string. Do not return nested objects or arrays.";
+    "Rewrite this transcript into a concise, professional tasting summary. Identify 2-6 salient categories that are actually mentioned (e.g., Aroma, Flavor, Sweetness, Acidity, Body, Carbonation, Spice/Heat, Balance, Aftertaste). Use category names that fit the product; do not invent or force categories. Return JSON only with key: tasting_notes_user as an object of category -> concise phrase. Keep each phrase under ~12 words. Remove numeric ratings or scores; do not include numbers like 8/10. Remove filler words like um/uh. If the transcript contains no tasting notes, return an empty object. Do not return nested objects or arrays.";
   const payload = buildTextPrompt(instructions, transcript);
   const text = await invokeClaude(payload);
   const parsed = parseJsonFromText(text);
