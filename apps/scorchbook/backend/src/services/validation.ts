@@ -17,12 +17,27 @@ export const CreateTastingSchema = z.object({
   productUrl: z.string().url().max(2000).optional(),
   imageBase64: z.string().max(10_000_000).optional(),
   imageMimeType: z.string().max(128).optional(),
-  backImageBase64: z.string().max(10_000_000).optional(),
-  backImageMimeType: z.string().max(128).optional(),
+  ingredientsImageBase64: z.string().max(10_000_000).optional(),
+  ingredientsImageMimeType: z.string().max(128).optional(),
+  nutritionImageBase64: z.string().max(10_000_000).optional(),
+  nutritionImageMimeType: z.string().max(128).optional(),
   voiceBase64: z.string().max(10_000_000).optional(),
   voiceMimeType: z.string().max(128).optional()
 });
 
 export const validateCreateTasting = (payload: unknown) => {
   return CreateTastingSchema.parse(payload);
+};
+
+export const UpdateTastingMediaSchema = z.object({
+  imageBase64: z.string().max(10_000_000).optional(),
+  imageMimeType: z.string().max(128).optional(),
+  ingredientsImageBase64: z.string().max(10_000_000).optional(),
+  ingredientsImageMimeType: z.string().max(128).optional(),
+  nutritionImageBase64: z.string().max(10_000_000).optional(),
+  nutritionImageMimeType: z.string().max(128).optional()
+});
+
+export const validateUpdateTastingMedia = (payload: unknown) => {
+  return UpdateTastingMediaSchema.parse(payload);
 };

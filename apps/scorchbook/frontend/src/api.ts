@@ -1,5 +1,5 @@
 import { config } from "./config";
-import type { CreateTastingInput, TastingRecord } from "./types";
+import type { CreateTastingInput, TastingRecord, UpdateTastingMediaInput } from "./types";
 
 export const fetchTastings = async (): Promise<TastingRecord[]> => {
   const response = await fetch(`${config.apiBaseUrl}/tastings`);
@@ -44,6 +44,29 @@ export const rerunTasting = async (id: string, token: string): Promise<void> => 
     const errorBody = await response.json().catch(() => ({}));
     throw new Error(errorBody.message ?? "Failed to rerun pipeline");
   }
+};
+
+export const updateTastingMedia = async (
+  id: string,
+  payload: UpdateTastingMediaInput,
+  token: string
+): Promise<TastingRecord | null> => {
+  const response = await fetch(`${config.apiBaseUrl}/tastings/${id}/media`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message ?? "Failed to update media");
+  }
+
+  const responseBody = (await response.json()) as { data: TastingRecord };
+  return responseBody.data ?? null;
 };
 
 export const deleteTasting = async (id: string, token: string): Promise<void> => {
