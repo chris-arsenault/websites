@@ -34,7 +34,7 @@ type AuthState = {
   username: string;
 };
 
-type FormMode = "add" | "edit";
+type FormMode = "add" | "edit" | "view";
 
 const toNumberOrNull = (value: string) => {
   if (!value.trim()) return null;
@@ -214,6 +214,7 @@ const App = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("add");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewingRecord, setViewingRecord] = useState<TastingRecord | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [showManualFields, setShowManualFields] = useState(false);
 
@@ -438,6 +439,7 @@ const App = () => {
   const openEditForm = (record: TastingRecord) => {
     setFormMode("edit");
     setEditingId(record.id);
+    setViewingRecord(record);
     setForm({
       name: record.name || "",
       maker: record.maker || "",
@@ -452,6 +454,29 @@ const App = () => {
     });
     setShowManualFields(true);
     setImagePreview(record.imageUrl || "");
+    setBackImagePreview(record.backImageUrl || "");
+    setFormOpen(true);
+  };
+
+  const openViewForm = (record: TastingRecord) => {
+    setFormMode("view");
+    setEditingId(null);
+    setViewingRecord(record);
+    setForm({
+      name: record.name || "",
+      maker: record.maker || "",
+      date: record.date || "",
+      score: record.score !== null ? String(record.score) : "",
+      style: record.style || "",
+      heatUser: record.heatUser !== null ? String(record.heatUser) : "",
+      heatVendor: record.heatVendor !== null ? String(record.heatVendor) : "",
+      tastingNotesUser: record.tastingNotesUser || "",
+      tastingNotesVendor: record.tastingNotesVendor || "",
+      productUrl: record.productUrl || ""
+    });
+    setShowManualFields(true);
+    setImagePreview(record.imageUrl || "");
+    setBackImagePreview(record.backImageUrl || "");
     setFormOpen(true);
   };
 
@@ -459,6 +484,7 @@ const App = () => {
     setFormOpen(false);
     setFormMode("add");
     setEditingId(null);
+    setViewingRecord(null);
     setShowManualFields(false);
     clearMedia();
   };
@@ -886,95 +912,118 @@ const App = () => {
       {formOpen && (
         <section className="add-panel">
           <div className="form-header">
-            <h2>{formMode === "edit" ? "Edit Tasting" : "New Tasting"}</h2>
+            <h2>{formMode === "view" ? "Tasting Details" : formMode === "edit" ? "Edit Tasting" : "New Tasting"}</h2>
             <button type="button" className="close-btn" onClick={closeForm}>×</button>
           </div>
 
           <form className="add-form" onSubmit={handleSubmit}>
-            {/* Media Capture - Primary */}
-            <div className="media-primary">
-              <p className="media-hint">
-                {formMode === "add"
-                  ? "Capture a photo and/or record your tasting notes. Our AI will extract the details."
-                  : "Update the photo or recording, or edit the fields below."}
-              </p>
+            {/* Media Section */}
+            {formMode === "view" ? (
+              <div className="media-view">
+                {(imagePreview || backImagePreview) && (
+                  <div className="media-row">
+                    {imagePreview && (
+                      <div className="media-preview-view">
+                        <span className="media-label">Front</span>
+                        <img src={imagePreview} alt="Bottle" />
+                      </div>
+                    )}
+                    {backImagePreview && (
+                      <div className="media-preview-view">
+                        <span className="media-label">Back</span>
+                        <img src={backImagePreview} alt="Label" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="media-primary">
+                <p className="media-hint">
+                  {formMode === "add"
+                    ? "Capture a photo and/or record your tasting notes. Our AI will extract the details."
+                    : "Update the photo or recording, or edit the fields below."}
+                </p>
 
-              <div className="media-row">
-                <div className="media-capture">
-                  <span className="media-label">📷 Front (Bottle)</span>
-                  {imagePreview ? (
-                    <div className="media-preview">
-                      <img src={imagePreview} alt="Bottle" />
-                      <button type="button" className="media-clear" onClick={clearPhoto}>Remove</button>
-                    </div>
-                  ) : cameraActive ? (
-                    <div className="camera-active">
-                      <video ref={videoRef} playsInline muted autoPlay />
-                      <button type="button" className="capture-btn" onClick={capturePhoto}>Capture</button>
-                    </div>
-                  ) : (
-                    <button type="button" className="media-start" onClick={startCamera}>
-                      Open Camera
-                    </button>
-                  )}
-                </div>
+                <div className="media-row">
+                  <div className="media-capture">
+                    <span className="media-label">📷 Front (Bottle)</span>
+                    {imagePreview ? (
+                      <div className="media-preview">
+                        <img src={imagePreview} alt="Bottle" />
+                        <button type="button" className="media-clear" onClick={clearPhoto}>Remove</button>
+                      </div>
+                    ) : cameraActive ? (
+                      <div className="camera-active">
+                        <video ref={videoRef} playsInline muted autoPlay />
+                        <button type="button" className="capture-btn" onClick={capturePhoto}>Capture</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="media-start" onClick={startCamera}>
+                        Open Camera
+                      </button>
+                    )}
+                  </div>
 
-                <div className="media-capture">
-                  <span className="media-label">📷 Back (Label)</span>
-                  {backImagePreview ? (
-                    <div className="media-preview">
-                      <img src={backImagePreview} alt="Label" />
-                      <button type="button" className="media-clear" onClick={clearBackPhoto}>Remove</button>
-                    </div>
-                  ) : backCameraActive ? (
-                    <div className="camera-active">
-                      <video ref={backVideoRef} playsInline muted autoPlay />
-                      <button type="button" className="capture-btn" onClick={captureBackPhoto}>Capture</button>
-                    </div>
-                  ) : (
-                    <button type="button" className="media-start" onClick={startBackCamera}>
-                      Open Camera
-                    </button>
-                  )}
-                </div>
+                  <div className="media-capture">
+                    <span className="media-label">📷 Back (Label)</span>
+                    {backImagePreview ? (
+                      <div className="media-preview">
+                        <img src={backImagePreview} alt="Label" />
+                        <button type="button" className="media-clear" onClick={clearBackPhoto}>Remove</button>
+                      </div>
+                    ) : backCameraActive ? (
+                      <div className="camera-active">
+                        <video ref={backVideoRef} playsInline muted autoPlay />
+                        <button type="button" className="capture-btn" onClick={captureBackPhoto}>Capture</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="media-start" onClick={startBackCamera}>
+                        Open Camera
+                      </button>
+                    )}
+                  </div>
 
-                <div className="media-capture">
-                  <span className="media-label">🎙️ Voice Note</span>
-                  {audioUrl ? (
-                    <div className="media-preview">
-                      <audio controls src={audioUrl} />
-                      <button type="button" className="media-clear" onClick={clearRecording}>Remove</button>
-                    </div>
-                  ) : isRecording ? (
-                    <div className="recording-active">
-                      <span className="recording-indicator">Recording...</span>
-                      <button type="button" className="stop-btn" onClick={stopRecording}>Stop</button>
-                    </div>
-                  ) : (
-                    <button type="button" className="media-start" onClick={startRecording}>
-                      Start Recording
-                    </button>
-                  )}
+                  <div className="media-capture">
+                    <span className="media-label">🎙️ Voice Note</span>
+                    {audioUrl ? (
+                      <div className="media-preview">
+                        <audio controls src={audioUrl} />
+                        <button type="button" className="media-clear" onClick={clearRecording}>Remove</button>
+                      </div>
+                    ) : isRecording ? (
+                      <div className="recording-active">
+                        <span className="recording-indicator">Recording...</span>
+                        <button type="button" className="stop-btn" onClick={stopRecording}>Stop</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="media-start" onClick={startRecording}>
+                        Start Recording
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Manual Fields Toggle */}
-            <div className="manual-toggle">
-              <label className="toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showManualFields}
-                  onChange={(e) => setShowManualFields(e.target.checked)}
-                />
-                <span>{formMode === "edit" ? "Edit fields" : "Add details manually"}</span>
-              </label>
-              {!showManualFields && hasManualData && (
-                <span className="has-data-hint">Has manual data</span>
-              )}
-            </div>
+            {/* Manual Fields Toggle - hide in view mode */}
+            {formMode !== "view" && (
+              <div className="manual-toggle">
+                <label className="toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={showManualFields}
+                    onChange={(e) => setShowManualFields(e.target.checked)}
+                  />
+                  <span>{formMode === "edit" ? "Edit fields" : "Add details manually"}</span>
+                </label>
+                {!showManualFields && hasManualData && (
+                  <span className="has-data-hint">Has manual data</span>
+                )}
+              </div>
+            )}
 
-            {/* Manual Fields */}
+            {/* Fields - readonly in view mode */}
             {showManualFields && (
               <div className="manual-fields">
                 <div className="form-grid">
@@ -984,6 +1033,7 @@ const App = () => {
                       value={form.name}
                       onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder="Sauce name"
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -992,6 +1042,7 @@ const App = () => {
                       value={form.maker}
                       onChange={(e) => setForm((prev) => ({ ...prev, maker: e.target.value }))}
                       placeholder="Brand/Maker"
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -1000,6 +1051,7 @@ const App = () => {
                       value={form.style}
                       onChange={(e) => setForm((prev) => ({ ...prev, style: e.target.value }))}
                       placeholder="e.g. Habanero"
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -1008,6 +1060,7 @@ const App = () => {
                       type="date"
                       value={form.date}
                       onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label className="span-2">
@@ -1017,22 +1070,35 @@ const App = () => {
                       value={form.productUrl}
                       onChange={(e) => setForm((prev) => ({ ...prev, productUrl: e.target.value }))}
                       placeholder="https://..."
+                      readOnly={formMode === "view"}
                     />
                   </label>
                 </div>
 
                 <div className="rating-section">
                   <div className="rating-group">
-                    <span className="rating-title">Your Score (0-10)</span>
-                    <ScoreSelector value={form.score} onChange={(val) => setForm((prev) => ({ ...prev, score: val }))} showLabel={false} />
+                    <span className="rating-title">Score</span>
+                    {formMode === "view" ? (
+                      <ScoreDisplay value={viewingRecord?.score ?? null} />
+                    ) : (
+                      <ScoreSelector value={form.score} onChange={(val) => setForm((prev) => ({ ...prev, score: val }))} showLabel={false} />
+                    )}
                   </div>
                   <div className="rating-group">
-                    <span className="rating-title">Your Heat (1-5)</span>
-                    <PepperSelector value={form.heatUser} onChange={(val) => setForm((prev) => ({ ...prev, heatUser: val }))} showLabel={false} />
+                    <span className="rating-title">Your Heat</span>
+                    {formMode === "view" ? (
+                      <HeatDisplay value={viewingRecord?.heatUser ?? null} />
+                    ) : (
+                      <PepperSelector value={form.heatUser} onChange={(val) => setForm((prev) => ({ ...prev, heatUser: val }))} showLabel={false} />
+                    )}
                   </div>
                   <div className="rating-group">
-                    <span className="rating-title">Vendor Heat (1-5)</span>
-                    <PepperSelector value={form.heatVendor} onChange={(val) => setForm((prev) => ({ ...prev, heatVendor: val }))} showLabel={false} />
+                    <span className="rating-title">Vendor Heat</span>
+                    {formMode === "view" ? (
+                      <HeatDisplay value={viewingRecord?.heatVendor ?? null} />
+                    ) : (
+                      <PepperSelector value={form.heatVendor} onChange={(val) => setForm((prev) => ({ ...prev, heatVendor: val }))} showLabel={false} />
+                    )}
                   </div>
                 </div>
 
@@ -1044,6 +1110,7 @@ const App = () => {
                       value={form.tastingNotesUser}
                       onChange={(e) => setForm((prev) => ({ ...prev, tastingNotesUser: e.target.value }))}
                       placeholder="Flavor profile, impressions..."
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -1053,21 +1120,53 @@ const App = () => {
                       value={form.tastingNotesVendor}
                       onChange={(e) => setForm((prev) => ({ ...prev, tastingNotesVendor: e.target.value }))}
                       placeholder="Official description..."
+                      readOnly={formMode === "view"}
                     />
                   </label>
                 </div>
+
+                {/* Ingredients & Nutrition in view mode */}
+                {formMode === "view" && viewingRecord && (
+                  <>
+                    {viewingRecord.ingredients && viewingRecord.ingredients.length > 0 && (
+                      <details className="view-ingredients" open>
+                        <summary>Ingredients ({viewingRecord.ingredients.length})</summary>
+                        <div className="ingredient-pills">
+                          {viewingRecord.ingredients.map((ing, i) => (
+                            <span key={i} className="ingredient-pill">{ing}</span>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                    {viewingRecord.nutritionFacts && (
+                      <div className="view-nutrition">
+                        <span className="view-section-label">Nutrition Facts</span>
+                        <div className="nutrition-grid">
+                          {viewingRecord.nutritionFacts.servingSize && <span>Serving: {viewingRecord.nutritionFacts.servingSize}</span>}
+                          {viewingRecord.nutritionFacts.calories !== undefined && <span>Calories: {viewingRecord.nutritionFacts.calories}</span>}
+                          {viewingRecord.nutritionFacts.sodium && <span>Sodium: {viewingRecord.nutritionFacts.sodium}</span>}
+                          {viewingRecord.nutritionFacts.totalCarbs && <span>Carbs: {viewingRecord.nutritionFacts.totalCarbs}</span>}
+                          {viewingRecord.nutritionFacts.sugars && <span>Sugars: {viewingRecord.nutritionFacts.sugars}</span>}
+                          {viewingRecord.nutritionFacts.protein && <span>Protein: {viewingRecord.nutritionFacts.protein}</span>}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
             <div className="form-actions">
-              <button type="button" className="btn-ghost" onClick={closeForm}>Cancel</button>
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={submitStatus === "saving" || (formMode === "add" && !showManualFields && !hasMedia)}
-              >
-                {submitStatus === "saving" ? "Saving..." : formMode === "edit" ? "Save Changes" : "Save Tasting"}
-              </button>
+              <button type="button" className="btn-ghost" onClick={closeForm}>{formMode === "view" ? "Close" : "Cancel"}</button>
+              {formMode !== "view" && (
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={submitStatus === "saving" || (formMode === "add" && !showManualFields && !hasMedia)}
+                >
+                  {submitStatus === "saving" ? "Saving..." : formMode === "edit" ? "Save Changes" : "Save Tasting"}
+                </button>
+              )}
             </div>
           </form>
         </section>
@@ -1107,11 +1206,16 @@ const App = () => {
                       <h3 className="card-title">{item.name || "Untitled"}</h3>
                       <p className="card-maker">{item.maker || "Unknown"}</p>
                     </div>
-                    {auth.status === "signedIn" && (
-                      <button className="edit-btn" onClick={() => openEditForm(item)} title="Edit">
-                        ✎
+                    <div className="card-header-actions">
+                      <button className="view-btn" onClick={() => openViewForm(item)} title="View details">
+                        ⋯
                       </button>
-                    )}
+                      {auth.status === "signedIn" && (
+                        <button className="edit-btn" onClick={() => openEditForm(item)} title="Edit">
+                          ✎
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="card-ratings">
                     <div className="card-rating">
@@ -1127,6 +1231,9 @@ const App = () => {
                     {item.status && item.status !== "complete" && (
                       <span className={`card-status status-${item.status}`}>{formatStatus(item.status)}</span>
                     )}
+                    {!item.productUrl && !item.tastingNotesVendor && item.heatVendor === null && (
+                      <span className="card-vendor-missing" title="Missing vendor details">?</span>
+                    )}
                     {item.style && <span className="card-tag">{item.style}</span>}
                     {item.date && <span className="card-date">{formatDate(item.date)}</span>}
                   </div>
@@ -1138,17 +1245,14 @@ const App = () => {
                   )}
                   {item.tastingNotesUser && <p className="card-notes">{item.tastingNotesUser}</p>}
                   {item.ingredients && item.ingredients.length > 0 && (
-                    <div className="card-ingredients">
-                      <span className="card-ingredients-label">Ingredients:</span>
+                    <details className="card-ingredients">
+                      <summary>Ingredients ({item.ingredients.length})</summary>
                       <div className="ingredient-pills">
-                        {item.ingredients.slice(0, 6).map((ing, i) => (
+                        {item.ingredients.map((ing, i) => (
                           <span key={i} className="ingredient-pill">{ing}</span>
                         ))}
-                        {item.ingredients.length > 6 && (
-                          <span className="ingredient-pill ingredient-more">+{item.ingredients.length - 6}</span>
-                        )}
                       </div>
-                    </div>
+                    </details>
                   )}
                   {item.nutritionFacts && (
                     <details className="card-nutrition">

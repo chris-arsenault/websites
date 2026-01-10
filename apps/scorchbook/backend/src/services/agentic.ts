@@ -875,8 +875,31 @@ export type BackImageExtraction = {
 };
 
 export const runBackImageExtraction = async (imageBase64: string, imageMimeType: string): Promise<BackImageExtraction> => {
-  const instructions =
-    "You are a data extraction system for hot sauce nutrition labels and ingredient lists. Return JSON only with keys: nutrition_facts (object with serving_size, calories, total_fat, sodium, total_carbs, sugars, protein), ingredients (array of ingredient names in order listed). Use null for missing values. For ingredients, extract each ingredient as a separate string, removing parenthetical details.";
+  const instructions = `Extract nutrition facts and ingredients from this hot sauce label image.
+
+Return JSON with exactly these keys:
+{
+  "nutrition_facts": {
+    "serving_size": "e.g. 1 tsp (5g)",
+    "calories": number or null,
+    "total_fat": "e.g. 0g",
+    "sodium": "e.g. 190mg",
+    "total_carbs": "e.g. 1g",
+    "sugars": "e.g. 0g",
+    "protein": "e.g. 0g"
+  },
+  "ingredients": ["ingredient1", "ingredient2", ...]
+}
+
+Guidelines:
+- Look for "Nutrition Facts" panel - extract serving size and per-serving values
+- Include units with values (mg, g, etc.) except calories which is just a number
+- For ingredients, find the ingredients list (usually starts with "Ingredients:")
+- List each ingredient separately, in order shown on label
+- Simplify ingredient names: "Red Habanero Peppers" not "Red Habanero Peppers (Capsicum chinense)"
+- Use null for any nutrition value not visible or legible
+- If no nutrition panel visible, set nutrition_facts to null
+- If no ingredients list visible, set ingredients to empty array`;
   const payload = buildVisionPrompt(instructions, imageBase64, imageMimeType);
   const text = await invokeClaude(payload);
   const parsed = parseJsonFromText(text);

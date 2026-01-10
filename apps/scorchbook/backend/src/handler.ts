@@ -10,9 +10,7 @@ import {
   formatTastingNotes,
   runBackImageExtraction,
   runImageExtraction,
-  runSearchEnrichment,
-  transcribeVoice,
-  type SearchContext
+  transcribeVoice
 } from "./services/agentic";
 import { sanitizeOptional } from "./utils/sanitize";
 import { jsonResponse, emptyResponse } from "./utils/http";
@@ -100,7 +98,6 @@ type ProcessEvent = {
   imageMimeType?: string;
   backImageMimeType?: string;
   voiceMimeType?: string;
-  forceSearch?: boolean;
   forceVoice?: boolean;
 };
 
@@ -184,41 +181,9 @@ const processTastingAsync = async (payload: ProcessEvent) => {
       applyEnrichment(record, {
         name: imageExtraction.name,
         maker: imageExtraction.maker,
-        style: imageExtraction.style,
-        heatVendor: imageExtraction.heatVendor ?? null,
-        tastingNotesVendor: imageExtraction.tastingNotesVendor,
-        productUrl: imageExtraction.productUrl
+        style: imageExtraction.style
       });
       await updateRecordStatus(record, "image_extracted");
-
-      const searchContext: SearchContext = {
-        name: record.name || imageExtraction.name,
-        maker: record.maker || imageExtraction.maker,
-        style: record.style || imageExtraction.style,
-        keywords: imageExtraction.keywords
-      };
-      logInfo("agent.search.start", {
-        recordId: record.id,
-        context: searchContext,
-        candidateUrls: [imageExtraction.productUrl, record.productUrl].filter(Boolean)
-      });
-      const search = await runSearchEnrichment(searchContext, [imageExtraction.productUrl, record.productUrl]);
-      applyEnrichment(record, {
-        name: search.searchFields.name,
-        maker: search.searchFields.maker,
-        style: search.searchFields.style,
-        heatVendor: search.searchFields.heatVendor ?? null,
-        tastingNotesVendor: search.searchFields.tastingNotesVendor,
-        productUrl: search.searchFields.productUrl
-      }, {
-        overwriteKeys: payload.forceSearch ? ["heatVendor", "tastingNotesVendor", "productUrl"] : []
-      });
-      logInfo("agent.search.complete", {
-        recordId: record.id,
-        searchCount: search.searchCount,
-        bestResultUrl: search.bestResultUrl
-      });
-      await updateRecordStatus(record, "image_enriched");
     }
 
     if (payload.backImageKey) {
@@ -432,7 +397,6 @@ export const handler = async (
           imageMimeType,
           backImageMimeType,
           voiceMimeType,
-          forceSearch: true,
           forceVoice: true
         });
       } catch (error) {

@@ -1,7 +1,6 @@
 export type ProcessingStatus =
   | "pending"
   | "image_extracted"
-  | "image_enriched"
   | "back_extracted"
   | "voice_transcribed"
   | "voice_extracted"
