@@ -128,6 +128,8 @@ const buildRecord = (input: CreateTastingInput, nowIso: string, createdBy?: stri
     style: normalizeString(input.style),
     heatUser: input.heatUser ?? null,
     heatVendor: input.heatVendor ?? null,
+    refreshing: input.refreshing ?? null,
+    sweet: input.sweet ?? null,
     tastingNotesUser: normalizeString(input.tastingNotesUser),
     tastingNotesVendor: normalizeString(input.tastingNotesVendor),
     productUrl: normalizeString(input.productUrl),
@@ -179,6 +181,7 @@ const processTastingAsync = async (payload: ProcessEvent) => {
       const imageMimeType = media.contentType ?? payload.imageMimeType ?? "image/jpeg";
       const imageExtraction = await runImageExtraction(media.base64, imageMimeType);
       applyEnrichment(record, {
+        productType: imageExtraction.productType,
         name: imageExtraction.name,
         maker: imageExtraction.maker,
         style: imageExtraction.style

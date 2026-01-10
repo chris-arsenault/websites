@@ -472,17 +472,44 @@
 /* ===========================================
    ADD PANEL
    =========================================== */
-.add-panel {
-  margin: 0.75rem 1rem;
+/* Form Modal Overlay */
+.form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(24, 20, 16, 0.7);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 200;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  backdrop-filter: blur(2px);
+}
+
+.form-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
   padding: 1.25rem;
   background: var(--cream);
   border: 2px solid var(--char);
   border-radius: 12px;
-  box-shadow: 0 4px 16px var(--shadow-warm);
-  animation: fadeUp 0.3s ease;
+  box-shadow: 0 12px 40px rgba(24, 20, 16, 0.4);
+  animation: modalSlideIn 0.25s ease;
 }
 
-.add-panel h2 {
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.form-modal h2 {
   margin: 0 0 1rem;
   font-size: 1.3rem;
   color: var(--char);
@@ -1067,6 +1094,7 @@
 .card-image {
   aspect-ratio: 16 / 9;
   overflow: hidden;
+  position: relative;
 }
 
 .card-image img {
@@ -1105,7 +1133,8 @@
 
 .card-ratings {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
   padding: 0.5rem 0;
 }
 
@@ -1542,8 +1571,8 @@
     padding: 1.5rem 1rem 3rem;
   }
 
-  .add-panel {
-    margin: 1rem 0;
+  .form-modal {
+    width: min(640px, 100%);
   }
 
   .card-grid {
@@ -1692,4 +1721,208 @@ input[readonly],
 textarea[readonly] {
   background: var(--surface);
   cursor: default;
+}
+
+/* ===========================================
+   QUENCHBOOK - PRODUCT TOGGLE & THEMING
+   =========================================== */
+
+/* Product Toggle in Header */
+.product-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--smoke);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.product-toggle button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--cream);
+  opacity: 0.6;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.product-toggle button:hover {
+  opacity: 0.8;
+}
+
+.product-toggle button.active {
+  background: var(--char);
+  opacity: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Theme classes for drink mode */
+.theme-drink .add-btn {
+  background: var(--drink-accent, #3b82f6);
+}
+
+.theme-drink .add-btn:hover {
+  background: #2563eb;
+}
+
+/* Drink accent color */
+:root {
+  --drink-accent: #3b82f6;
+  --drink-accent-soft: rgba(59, 130, 246, 0.1);
+}
+
+/* ===========================================
+   DRINK RATING DISPLAYS
+   =========================================== */
+
+/* Refresh Display (droplets) */
+.refresh-display,
+.sweet-display {
+  display: flex;
+  gap: 2px;
+}
+
+.refresh-empty,
+.sweet-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.droplet-icon,
+.candy-icon {
+  font-size: 0.85rem;
+  transition: opacity 0.1s ease;
+}
+
+.droplet-icon.empty,
+.candy-icon.empty {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+
+.droplet-icon.filled {
+  opacity: 1;
+  filter: drop-shadow(0 1px 2px rgba(59, 130, 246, 0.4));
+}
+
+.candy-icon.filled {
+  opacity: 1;
+  filter: drop-shadow(0 1px 2px rgba(236, 72, 153, 0.4));
+}
+
+/* ===========================================
+   DRINK RATING SELECTORS
+   =========================================== */
+
+.droplet-selector,
+.candy-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.droplet-row,
+.candy-row {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.droplet-btn,
+.candy-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  background: var(--aged-paper);
+  border: 2px solid var(--border-burnt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.droplet-btn:hover,
+.candy-btn:hover {
+  transform: scale(1.05);
+  box-shadow: none;
+}
+
+.droplet-btn.active {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border-color: #2563eb;
+}
+
+.candy-btn.active {
+  background: linear-gradient(135deg, #f472b6, #ec4899);
+  border-color: #db2777;
+}
+
+.droplet-btn .droplet,
+.candy-btn .candy {
+  font-size: 1rem;
+  transition: all 0.15s ease;
+}
+
+.droplet-btn.active .droplet,
+.candy-btn.active .candy {
+  filter: brightness(1.2) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* ===========================================
+   PRODUCT TYPE BADGE ON CARDS
+   =========================================== */
+
+.card-product-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.badge-sauce {
+  box-shadow: 0 2px 8px rgba(214, 40, 40, 0.4);
+}
+
+.badge-drink {
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+/* Card theme variations */
+.card-drink {
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.card-drink:hover {
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.1);
+}
+
+/* Responsive adjustments for product toggle */
+@media (max-width: 480px) {
+  .product-toggle button {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .product-toggle {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
 }

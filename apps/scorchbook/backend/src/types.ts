@@ -8,6 +8,8 @@ export type ProcessingStatus =
   | "complete"
   | "error";
 
+export type ProductType = "sauce" | "drink";
+
 export type NutritionFacts = {
   servingSize?: string;
   calories?: number;
@@ -26,13 +28,18 @@ export type TastingRecord = {
   processingError?: string;
   needsAttention?: boolean;
   attentionReason?: string;
+  productType?: ProductType;
   name: string;
   maker: string;
   date: string;
   score: number | null;
   style: string;
+  // Sauce-specific
   heatUser: number | null;
   heatVendor: number | null;
+  // Drink-specific
+  refreshing: number | null;
+  sweet: number | null;
   tastingNotesUser: string;
   tastingNotesVendor: string;
   productUrl: string;
@@ -55,6 +62,8 @@ export type CreateTastingInput = {
   style?: string;
   heatUser?: number | null;
   heatVendor?: number | null;
+  refreshing?: number | null;
+  sweet?: number | null;
   tastingNotesUser?: string;
   tastingNotesVendor?: string;
   productUrl?: string;
@@ -67,6 +76,7 @@ export type CreateTastingInput = {
 };
 
 export type AgentEnrichment = {
+  productType?: ProductType;
   name?: string;
   maker?: string;
   style?: string;

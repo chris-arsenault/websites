@@ -10,6 +10,8 @@ export const CreateTastingSchema = z.object({
   style: OptionalString,
   heatUser: z.number().min(0).max(10).nullable().optional(),
   heatVendor: z.number().min(0).max(10).nullable().optional(),
+  refreshing: z.number().min(1).max(5).nullable().optional(),
+  sweet: z.number().min(1).max(5).nullable().optional(),
   tastingNotesUser: z.string().trim().max(4000).optional(),
   tastingNotesVendor: z.string().trim().max(4000).optional(),
   productUrl: z.string().url().max(2000).optional(),

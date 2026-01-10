@@ -8,19 +8,26 @@ export type NutritionFacts = {
   protein?: string;
 };
 
+export type ProductType = "sauce" | "drink";
+
 export type TastingRecord = {
   id: string;
   createdAt: string;
   updatedAt: string;
   status?: string;
   processingError?: string;
+  productType?: ProductType;
   name: string;
   maker: string;
   date: string;
   score: number | null;
   style: string;
+  // Sauce-specific
   heatUser: number | null;
   heatVendor: number | null;
+  // Drink-specific
+  refreshing: number | null;
+  sweet: number | null;
   tastingNotesUser: string;
   tastingNotesVendor: string;
   productUrl: string;
@@ -45,6 +52,8 @@ export type CreateTastingInput = {
   style?: string;
   heatUser?: number | null;
   heatVendor?: number | null;
+  refreshing?: number | null;
+  sweet?: number | null;
   tastingNotesUser?: string;
   tastingNotesVendor?: string;
   productUrl?: string;
@@ -57,6 +66,7 @@ export type CreateTastingInput = {
 };
 
 export type Filters = {
+  productType: ProductType | "all";
   search: string;
   style: string;
   ingredient: string;

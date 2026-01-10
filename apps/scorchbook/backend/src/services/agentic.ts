@@ -850,21 +850,38 @@ const pickBestProductUrl = (candidates: Array<string | undefined>, context: Sear
 export type ImageExtraction = AgentEnrichment & { keywords?: string[] };
 
 export const runImageExtraction = async (imageBase64: string, imageMimeType: string): Promise<ImageExtraction> => {
-  const instructions =
-    "You are a data extraction system for hot sauce bottles. Return JSON only with keys: name, maker, style, heat_vendor, tasting_notes_vendor, product_url, keywords (array of strings). Include any brand or product line keywords. Use null for unknowns.";
+  const instructions = `Analyze this product image and extract information.
+
+First, determine the product type:
+- "sauce" = hot sauce, pepper sauce, chili sauce, salsa
+- "drink" = non-alcoholic beverage (kombucha, juice, soda, sparkling water, tea, coffee, NA beer, mocktail, smoothie, sports drink)
+
+Return JSON with these keys:
+{
+  "product_type": "sauce" or "drink",
+  "name": "product name",
+  "maker": "brand/manufacturer",
+  "style": "style category",
+  "keywords": ["relevant", "search", "keywords"]
+}
+
+Style examples:
+- For sauces: Habanero, Ghost Pepper, Chipotle, Cayenne, Carolina Reaper, Sriracha, Buffalo
+- For drinks: Kombucha, NA Beer, Mocktail, Juice, Soda, Sparkling Water, Tea, Coffee, Smoothie, Sports Drink
+
+Use null for any field you cannot determine.`;
   const payload = buildVisionPrompt(instructions, imageBase64, imageMimeType);
   const text = await invokeClaude(payload);
   const parsed = parseJsonFromText(text);
   if (!parsed) {
     return {};
   }
+  const productType = parsed.product_type === "drink" ? "drink" : "sauce";
   return {
+    productType,
     name: typeof parsed.name === "string" ? parsed.name : undefined,
     maker: typeof parsed.maker === "string" ? parsed.maker : undefined,
     style: typeof parsed.style === "string" ? parsed.style : undefined,
-    heatVendor: clampScore(normalizeNumber(parsed.heat_vendor)),
-    tastingNotesVendor: typeof parsed.tasting_notes_vendor === "string" ? parsed.tasting_notes_vendor : undefined,
-    productUrl: typeof parsed.product_url === "string" ? parsed.product_url : undefined,
     keywords: Array.isArray(parsed.keywords) ? parsed.keywords.filter((item) => typeof item === "string") : undefined
   };
 };

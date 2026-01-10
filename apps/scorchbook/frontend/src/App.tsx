@@ -3,9 +3,16 @@ import Fuse from "fuse.js";
 import "./App.css";
 import { createTasting, deleteTasting, fetchTastings, rerunTasting } from "./api";
 import { getSession, signIn, signOut } from "./auth";
-import type { CreateTastingInput, Filters, TastingRecord } from "./types";
+import type { CreateTastingInput, Filters, ProductType, TastingRecord } from "./types";
+
+const getStoredProductType = (): ProductType | "all" => {
+  const stored = localStorage.getItem("productTypeFilter");
+  if (stored === "sauce" || stored === "drink" || stored === "all") return stored;
+  return "all";
+};
 
 const defaultFilters: Filters = {
+  productType: getStoredProductType(),
   search: "",
   style: "",
   ingredient: "",
@@ -23,6 +30,8 @@ const emptyForm = {
   style: "",
   heatUser: "",
   heatVendor: "",
+  refreshing: "",
+  sweet: "",
   tastingNotesUser: "",
   tastingNotesVendor: "",
   productUrl: ""
@@ -157,6 +166,78 @@ const HeatDisplay = ({ value, max = 5 }: { value: number | null; max?: number })
         <span key={i} className={`pepper-icon ${i < filled ? "filled" : "empty"}`}>🌶️</span>
       ))}
     </span>
+  );
+};
+
+// Display droplets for refreshing level (read-only)
+const RefreshDisplay = ({ value, max = 5 }: { value: number | null; max?: number }) => {
+  if (value === null) return <span className="refresh-empty">-</span>;
+  const filled = Math.min(Math.round(value), max);
+  return (
+    <span className="refresh-display">
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`droplet-icon ${i < filled ? "filled" : "empty"}`}>💧</span>
+      ))}
+    </span>
+  );
+};
+
+// Display candy for sweetness level (read-only)
+const SweetDisplay = ({ value, max = 5 }: { value: number | null; max?: number }) => {
+  if (value === null) return <span className="sweet-empty">-</span>;
+  const filled = Math.min(Math.round(value), max);
+  return (
+    <span className="sweet-display">
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`candy-icon ${i < filled ? "filled" : "empty"}`}>🍬</span>
+      ))}
+    </span>
+  );
+};
+
+// Droplet Selector for forms (1-5 scale)
+const DropletSelector = ({ value, onChange, label, showLabel = true }: { value: number | string; onChange: (val: string) => void; label?: string; showLabel?: boolean }) => {
+  const numValue = typeof value === "string" ? (value ? parseInt(value, 10) : 0) : value;
+  return (
+    <div className="droplet-selector">
+      {showLabel && label && <span className="selector-label">{label}</span>}
+      <div className="droplet-row">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <button
+            type="button"
+            key={level}
+            className={`droplet-btn ${numValue >= level ? "active" : ""}`}
+            onClick={() => onChange(numValue === level ? "" : String(level))}
+            title={`Refreshing level ${level}`}
+          >
+            <span className="droplet">💧</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Candy Selector for forms (1-5 scale)
+const CandySelector = ({ value, onChange, label, showLabel = true }: { value: number | string; onChange: (val: string) => void; label?: string; showLabel?: boolean }) => {
+  const numValue = typeof value === "string" ? (value ? parseInt(value, 10) : 0) : value;
+  return (
+    <div className="candy-selector">
+      {showLabel && label && <span className="selector-label">{label}</span>}
+      <div className="candy-row">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <button
+            type="button"
+            key={level}
+            className={`candy-btn ${numValue >= level ? "active" : ""}`}
+            onClick={() => onChange(numValue === level ? "" : String(level))}
+            title={`Sweetness level ${level}`}
+          >
+            <span className="candy">🍬</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 };
 
@@ -302,6 +383,11 @@ const App = () => {
     loadTastings();
   }, []);
 
+  // Persist productType filter to localStorage
+  useEffect(() => {
+    localStorage.setItem("productTypeFilter", filters.productType);
+  }, [filters.productType]);
+
   useEffect(() => {
     if (!formOpen) {
       stopCamera();
@@ -372,6 +458,11 @@ const App = () => {
     const minHeat = filters.minHeat ? Number(filters.minHeat) : null;
 
     let results = tastings.filter((item) => {
+      // Product type filter (treat undefined as "sauce" for backwards compatibility)
+      if (filters.productType !== "all") {
+        const itemType = item.productType ?? "sauce";
+        if (itemType !== filters.productType) return false;
+      }
       if (lowerSearch) {
         const combined = `${item.name} ${item.maker}`.toLowerCase();
         if (!combined.includes(lowerSearch)) return false;
@@ -448,6 +539,8 @@ const App = () => {
       style: record.style || "",
       heatUser: record.heatUser !== null ? String(record.heatUser) : "",
       heatVendor: record.heatVendor !== null ? String(record.heatVendor) : "",
+      refreshing: record.refreshing !== null ? String(record.refreshing) : "",
+      sweet: record.sweet !== null ? String(record.sweet) : "",
       tastingNotesUser: record.tastingNotesUser || "",
       tastingNotesVendor: record.tastingNotesVendor || "",
       productUrl: record.productUrl || ""
@@ -470,6 +563,8 @@ const App = () => {
       style: record.style || "",
       heatUser: record.heatUser !== null ? String(record.heatUser) : "",
       heatVendor: record.heatVendor !== null ? String(record.heatVendor) : "",
+      refreshing: record.refreshing !== null ? String(record.refreshing) : "",
+      sweet: record.sweet !== null ? String(record.sweet) : "",
       tastingNotesUser: record.tastingNotesUser || "",
       tastingNotesVendor: record.tastingNotesVendor || "",
       productUrl: record.productUrl || ""
@@ -669,6 +764,8 @@ const App = () => {
       style: form.style.trim() || undefined,
       heatUser: toNumberOrNull(form.heatUser),
       heatVendor: toNumberOrNull(form.heatVendor),
+      refreshing: toNumberOrNull(form.refreshing),
+      sweet: toNumberOrNull(form.sweet),
       tastingNotesUser: form.tastingNotesUser.trim() || undefined,
       tastingNotesVendor: form.tastingNotesVendor.trim() || undefined,
       productUrl: form.productUrl.trim() || undefined,
@@ -699,6 +796,8 @@ const App = () => {
                   style: form.style.trim() || t.style,
                   heatUser: toNumberOrNull(form.heatUser) ?? t.heatUser,
                   heatVendor: toNumberOrNull(form.heatVendor) ?? t.heatVendor,
+                  refreshing: toNumberOrNull(form.refreshing) ?? t.refreshing,
+                  sweet: toNumberOrNull(form.sweet) ?? t.sweet,
                   tastingNotesUser: form.tastingNotesUser.trim() || t.tastingNotesUser,
                   tastingNotesVendor: form.tastingNotesVendor.trim() || t.tastingNotesVendor,
                   productUrl: form.productUrl.trim() || t.productUrl,
@@ -800,13 +899,42 @@ const App = () => {
     }
   };
 
+  const brandName = filters.productType === "drink" ? "Quenchbook" : "Scorchbook";
+  const brandTagline = filters.productType === "drink" ? "Drink Log" : filters.productType === "all" ? "Taste Log" : "Hot Sauce Log";
+  const searchPlaceholder = filters.productType === "drink" ? "Search drinks..." : filters.productType === "all" ? "Search..." : "Search sauces...";
+  const itemLabel = filters.productType === "drink" ? "drink" : filters.productType === "all" ? "item" : "sauce";
+
   return (
-    <div className="app">
+    <div className={`app ${filters.productType === "drink" ? "theme-drink" : "theme-sauce"}`}>
       {/* Compact Header */}
       <header className="header">
         <div className="header-brand">
-          <h1>Scorchbook</h1>
-          <span className="header-tagline">Hot Sauce Log</span>
+          <h1>{brandName}</h1>
+          <span className="header-tagline">{brandTagline}</span>
+        </div>
+
+        <div className="product-toggle">
+          <button
+            className={filters.productType === "sauce" ? "active" : ""}
+            onClick={() => setFilters((f) => ({ ...f, productType: "sauce" }))}
+            title="Hot Sauces"
+          >
+            Sauces
+          </button>
+          <button
+            className={filters.productType === "all" ? "active" : ""}
+            onClick={() => setFilters((f) => ({ ...f, productType: "all" }))}
+            title="All Items"
+          >
+            All
+          </button>
+          <button
+            className={filters.productType === "drink" ? "active" : ""}
+            onClick={() => setFilters((f) => ({ ...f, productType: "drink" }))}
+            title="Drinks"
+          >
+            Drinks
+          </button>
         </div>
 
         <div className="header-actions">
@@ -872,7 +1000,7 @@ const App = () => {
             <span className="search-icon">🔍</span>
             <input
               type="search"
-              placeholder="Search sauces..."
+              placeholder={searchPlaceholder}
               value={filters.search}
               onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
             />
@@ -908,15 +1036,16 @@ const App = () => {
 
       {errorMessage && <div className="error-banner">{errorMessage}</div>}
 
-      {/* Add/Edit Form */}
+      {/* Add/Edit Form Modal */}
       {formOpen && (
-        <section className="add-panel">
-          <div className="form-header">
-            <h2>{formMode === "view" ? "Tasting Details" : formMode === "edit" ? "Edit Tasting" : "New Tasting"}</h2>
-            <button type="button" className="close-btn" onClick={closeForm}>×</button>
-          </div>
+        <div className="form-overlay" onClick={closeForm}>
+          <section className="form-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="form-header">
+              <h2>{formMode === "view" ? "Tasting Details" : formMode === "edit" ? "Edit Tasting" : "New Tasting"}</h2>
+              <button type="button" className="close-btn" onClick={closeForm}>×</button>
+            </div>
 
-          <form className="add-form" onSubmit={handleSubmit}>
+            <form className="add-form" onSubmit={handleSubmit}>
             {/* Media Section */}
             {formMode === "view" ? (
               <div className="media-view">
@@ -1084,22 +1213,47 @@ const App = () => {
                       <ScoreSelector value={form.score} onChange={(val) => setForm((prev) => ({ ...prev, score: val }))} showLabel={false} />
                     )}
                   </div>
-                  <div className="rating-group">
-                    <span className="rating-title">Your Heat</span>
-                    {formMode === "view" ? (
-                      <HeatDisplay value={viewingRecord?.heatUser ?? null} />
-                    ) : (
-                      <PepperSelector value={form.heatUser} onChange={(val) => setForm((prev) => ({ ...prev, heatUser: val }))} showLabel={false} />
-                    )}
-                  </div>
-                  <div className="rating-group">
-                    <span className="rating-title">Vendor Heat</span>
-                    {formMode === "view" ? (
-                      <HeatDisplay value={viewingRecord?.heatVendor ?? null} />
-                    ) : (
-                      <PepperSelector value={form.heatVendor} onChange={(val) => setForm((prev) => ({ ...prev, heatVendor: val }))} showLabel={false} />
-                    )}
-                  </div>
+                  {/* Show sauce ratings for sauces, drink ratings for drinks, or all for add mode */}
+                  {(viewingRecord?.productType ?? "sauce") === "sauce" || formMode === "add" ? (
+                    <>
+                      <div className="rating-group">
+                        <span className="rating-title">Your Heat</span>
+                        {formMode === "view" ? (
+                          <HeatDisplay value={viewingRecord?.heatUser ?? null} />
+                        ) : (
+                          <PepperSelector value={form.heatUser} onChange={(val) => setForm((prev) => ({ ...prev, heatUser: val }))} showLabel={false} />
+                        )}
+                      </div>
+                      <div className="rating-group">
+                        <span className="rating-title">Vendor Heat</span>
+                        {formMode === "view" ? (
+                          <HeatDisplay value={viewingRecord?.heatVendor ?? null} />
+                        ) : (
+                          <PepperSelector value={form.heatVendor} onChange={(val) => setForm((prev) => ({ ...prev, heatVendor: val }))} showLabel={false} />
+                        )}
+                      </div>
+                    </>
+                  ) : null}
+                  {(viewingRecord?.productType ?? "sauce") === "drink" || formMode === "add" ? (
+                    <>
+                      <div className="rating-group">
+                        <span className="rating-title">Refreshing</span>
+                        {formMode === "view" ? (
+                          <RefreshDisplay value={viewingRecord?.refreshing ?? null} />
+                        ) : (
+                          <DropletSelector value={form.refreshing} onChange={(val) => setForm((prev) => ({ ...prev, refreshing: val }))} showLabel={false} />
+                        )}
+                      </div>
+                      <div className="rating-group">
+                        <span className="rating-title">Sweetness</span>
+                        {formMode === "view" ? (
+                          <SweetDisplay value={viewingRecord?.sweet ?? null} />
+                        ) : (
+                          <CandySelector value={form.sweet} onChange={(val) => setForm((prev) => ({ ...prev, sweet: val }))} showLabel={false} />
+                        )}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
 
                 <div className="notes-section">
@@ -1170,12 +1324,13 @@ const App = () => {
             </div>
           </form>
         </section>
+      </div>
       )}
 
       {/* Content */}
       <main className="content">
         <div className="content-header">
-          <span className="content-count">{filteredTastings.length} {filteredTastings.length === 1 ? "sauce" : "sauces"}</span>
+          <span className="content-count">{filteredTastings.length} {filteredTastings.length === 1 ? itemLabel : `${itemLabel}s`}</span>
         </div>
 
         {loading ? (
@@ -1183,12 +1338,12 @@ const App = () => {
         ) : filteredTastings.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">🌶️</span>
-            <p>{tastings.length === 0 ? "No sauces yet. Add your first tasting!" : "No sauces match your filters."}</p>
+            <p>{tastings.length === 0 ? `No ${itemLabel}s yet. Add your first tasting!` : `No ${itemLabel}s match your filters.`}</p>
           </div>
         ) : (
           <div className="card-grid">
             {filteredTastings.map((item) => (
-              <article className={`card ${item.needsAttention ? "needs-attention" : ""}`} key={item.id}>
+              <article className={`card ${item.needsAttention ? "needs-attention" : ""} ${(item.productType ?? "sauce") === "drink" ? "card-drink" : "card-sauce"}`} key={item.id}>
                 {item.needsAttention && (
                   <div className="attention-banner">
                     <span>⚠️ Needs attention</span>
@@ -1198,6 +1353,11 @@ const App = () => {
                 {item.imageUrl && (
                   <div className="card-image">
                     <img src={item.imageUrl} alt={item.name} loading="lazy" />
+                    {filters.productType === "all" && (
+                      <span className={`card-product-badge ${(item.productType ?? "sauce") === "drink" ? "badge-drink" : "badge-sauce"}`}>
+                        {(item.productType ?? "sauce") === "drink" ? "🥤" : "🌶️"}
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="card-body">
@@ -1222,10 +1382,23 @@ const App = () => {
                       <span className="card-rating-label">Score</span>
                       <ScoreDisplay value={item.score} />
                     </div>
-                    <div className="card-rating">
-                      <span className="card-rating-label">Heat</span>
-                      <HeatDisplay value={item.heatUser} />
-                    </div>
+                    {(item.productType ?? "sauce") === "sauce" ? (
+                      <div className="card-rating">
+                        <span className="card-rating-label">Heat</span>
+                        <HeatDisplay value={item.heatUser} />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="card-rating">
+                          <span className="card-rating-label">Refreshing</span>
+                          <RefreshDisplay value={item.refreshing} />
+                        </div>
+                        <div className="card-rating">
+                          <span className="card-rating-label">Sweet</span>
+                          <SweetDisplay value={item.sweet} />
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="card-meta">
                     {item.status && item.status !== "complete" && (
