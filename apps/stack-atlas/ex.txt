@@ -1,0 +1,419 @@
+FWA Tech Stacks 
+
+HHS OIG CGAP 
+
+AI/Machine Learning Technologies 
+
+Deep Neural Networks (DNNs) 
+
+Natural Language Processing (NLP) 
+
+Named Entity Recognition (NER) 
+
+Topic modeling 
+
+Neural-network-based document embeddings 
+
+Principal Component Analysis (PCA) 
+
+Textual embedding for contextual similarity 
+
+Supervised learning for fraud classification 
+
+Anomaly detection algorithms 
+
+Gradient boosting machine learning 
+
+LLM processing workflow 
+
+Large Language Models (LLMs) 
+
+Cloud & Infrastructure 
+
+AWS (Amazon Web Services) 
+
+AWS Bedrock 
+
+AWS Lambda 
+
+AWS Batch jobs 
+
+AWS Textract 
+
+SageMaker 
+
+AWS Security Hub 
+
+Docker 
+
+FedRAMP-compliant cloud implementations 
+
+DevOps/DevSecOps Tools 
+
+Jira 
+
+Confluence 
+
+AWS Cloudwatch 
+
+GitHub 
+
+Jenkins 
+
+Jenkins Templating Engine 
+
+Nexus 
+
+Trivy (container scanning) 
+
+OpenSCAP 
+
+SonarQube 
+
+Programming & Development 
+
+Python 
+
+React 
+
+Multithreading capabilities 
+
+API endpoints 
+
+Two-tier monolith, with significant data pipelines components using a hub/spoke model for unifying data 
+
+HHS OIG SIE, MLE, and PALACE 
+
+Management & Collaboration Tools 
+
+Microsoft Teams 
+
+Jira 
+
+Confluence 
+
+SharePoint 
+
+Cloud & Infrastructure (AWS) 
+
+AWS (Amazon Web Services) 
+
+AWS Lambda 
+
+AWS Cognito 
+
+AWS SageMaker 
+
+AWS SageMaker Pipelines 
+
+AWS SageMaker Studio 
+
+AWS SageMaker Workflows 
+
+AWS API Gateway 
+
+AWS CloudWatch (Dashboards, Alarms, RUM) 
+
+AWS Lambda Insights 
+
+AWS Elastic Container Service (ECS) 
+
+AWS EKS (Elastic Kubernetes Service) 
+
+AWS ALB (Application Load Balancer) 
+
+AWS DynamoDB 
+
+AWS AppConfig 
+
+AWS SNS (Simple Notification Service) 
+
+AWS S3 Buckets 
+
+AWS EC2 
+
+AWS Bedrock 
+
+AWS Batch (with spot instances) 
+
+AWS SSM Parameter Store (Config-Server) 
+
+AWS VPCs 
+
+AWS Security Groups 
+
+AWS Security Hub 
+
+AWS Lake Formation 
+
+AWS Athena 
+
+AWS Glue 
+
+AWS Glue DataBrew 
+
+Amazon Neptune (graph database) 
+
+EMR Studio 
+
+Cloud9 
+
+Data Visualization & Analytics 
+
+Looker 
+
+PowerBI 
+
+AWS QuickSight 
+
+D3/Plotly 
+
+Development & DevOps 
+
+GitHub 
+
+Jenkins (CI/CD) 
+
+Jenkins Templating Engine 
+
+Nexus 
+
+Docker 
+
+Terraform 
+
+Node.js 
+
+Security & Scanning 
+
+Trivy 
+
+OpenScap 
+
+SonarQube 
+
+SAST (Static Application Security Testing) 
+
+SCA (Software Composition Analysis) 
+
+Frontend Technologies 
+
+React 
+
+Next.js 
+
+TypeScript 
+
+USWDS Design System (U.S. Web Design System) 
+
+CSS (responsive layouts) 
+
+Backend & Data Technologies 
+
+Python 
+
+Node.js 
+
+Redis (data caching) 
+
+SQL 
+
+Snowflake 
+
+SnowSight 
+
+Authentication & Identity 
+
+Okta 
+
+AWS Cognito 
+
+ADFS SSOEntraID 
+
+Azure AD (identity federation) 
+
+CMS Okta/OAuth Authentication 
+
+IAM (Identity and Access Management) 
+
+Machine Learning & AI 
+
+Named Entity Recognition (NER) 
+
+Topic Modeling 
+
+Large Language Models (LLM) 
+
+Zero Shot Learning 
+
+Generative AI (GenAI) 
+
+GPT Architecture (autoregressive transformer) 
+
+Custom transformer with self-attention 
+
+Random Forest model 
+
+PyTorch deep learning framework 
+
+Distributed GPU training 
+
+Claude 3.7 (via AWS Bedrock) 
+
+AWS Textract (PDF text extraction) 
+
+MLOps 
+
+ML Models (Fraud, Program) 
+
+Testing & Quality 
+
+Unit Tests 
+
+Load/Performance Tests 
+
+Integration Tests 
+
+End-to-End Tests 
+
+Accessibility/508 Tests 
+
+UI Unit Tests 
+
+Data Tests 
+
+Development Concepts & Methodologies 
+
+Feature Flags 
+
+Microservices architecture 
+
+Loosely coupled architecture 
+
+Agile methodology 
+
+MVP (Minimum Viable Product) approach 
+
+DORA Metrics/Practices 
+
+DevSecOps 
+
+CI/CD Pipelines 
+
+Shift-left security 
+
+OKRs (Objectives and Key Results)  
+
+Semantic Layer that abstracts data sources into business objects 
+
+Consistent methodology for data queries that have been approved by program experts 
+
+IDE 
+
+SageMaker Studio 
+
+Coder 
+
+Infrastructure & Architecture Concepts 
+
+Landing Zone Accelerator (LZA) 
+
+Zero Trust Network 
+
+defense in depth IAM with RBAC/permission boundaries/OU controlsSemantic layer 
+
+Object-oriented programming 
+
+Cross-account roles 
+
+IAM guardrails 
+
+VPC settings 
+
+Cloud Analytics Platform 
+
+Cloud Automation Platform 
+
+Monitoring & Observability 
+
+CloudWatch Real User Monitoring (RUM) 
+
+Operational Dashboards 
+
+Security Dashboards 
+
+USCIS FINCH 
+
+Infrastructure:  
+
+AWS (RDS/S3/CloudWatch/SQS/Comprehend/Lambda, EKS) 
+
+Kubernetes 
+
+Rancher 
+
+Linux 
+
+Apigee 
+
+Hashicorp Terraform 
+
+Hashicorp Vault 
+
+Docker 
+
+CI/CD:  
+
+Harness 
+
+Monitoring:  
+
+NewRelic 
+
+Splunk 
+
+Grafana 
+
+CloudWatch 
+
+Quality and Security:  
+
+Checkmarx 
+
+Twistlock 
+
+SonarQube 
+
+NexusIQ 
+
+Testing:  
+
+JUnit 
+
+Cypress 
+
+Pytest 
+
+Other Stuff:  
+
+Backstage 
+
+  
+
+AI Related: 
+
+State machine architecture decoupled using lambda functions, sqs queues and microservices concepts. 
+
+Postgres database 
+
+Gensim word2vec to generate sentence embeddings (currently evaluating using Titan Embeddings via AWS Bedrock) 
+
+FAISS python library for similarity search 
+
+Kafka queues 
+
+POC using hugging-face model for LLM detection 
+
+POC using MLFlow to do CI/CD on models 
+
+ 
