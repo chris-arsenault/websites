@@ -1,11 +1,11 @@
 {
-  "name": "hotsauce-backend",
+  "name": "scorchbook-backend",
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
   "main": "dist/handler.js",
   "scripts": {
-    "build": "esbuild src/handler.ts --bundle --platform=node --target=node18 --outdir=dist --sourcemap",
+    "build": "esbuild src/handler.ts --bundle --platform=node --target=node24 --outdir=dist --sourcemap",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -26,6 +26,6 @@
     "typescript": "^5.5.4"
   },
   "engines": {
-    "node": ">=18"
+    "node": "24.12.0"
   }
 }

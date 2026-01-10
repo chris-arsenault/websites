@@ -1,7 +1,7 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
 import { logInfo, logWarn } from "../utils/logger";
-import type { AgentEnrichment } from "../types";
+import type { AgentEnrichment, NutritionFacts } from "../types";
 
 const bedrockClient = new BedrockRuntimeClient({});
 const transcribeClient = new TranscribeClient({});
@@ -522,7 +522,7 @@ const fetchPageHtml = async (url: string): Promise<string | null> => {
   try {
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "hotsauce-agent/1.0",
+        "User-Agent": "scorchbook-agent/1.0",
         Accept: "text/html,application/xhtml+xml"
       },
       signal: controller.signal
@@ -850,23 +850,93 @@ const pickBestProductUrl = (candidates: Array<string | undefined>, context: Sear
 export type ImageExtraction = AgentEnrichment & { keywords?: string[] };
 
 export const runImageExtraction = async (imageBase64: string, imageMimeType: string): Promise<ImageExtraction> => {
-  const instructions =
-    "You are a data extraction system for hot sauce bottles. Return JSON only with keys: name, maker, style, heat_vendor, tasting_notes_vendor, product_url, keywords (array of strings). Include any brand or product line keywords. Use null for unknowns.";
+  const instructions = `Analyze this product image and extract information.
+
+First, determine the product type:
+- "sauce" = hot sauce, pepper sauce, chili sauce, salsa
+- "drink" = non-alcoholic beverage (kombucha, juice, soda, sparkling water, tea, coffee, NA beer, mocktail, smoothie, sports drink)
+
+Return JSON with these keys:
+{
+  "product_type": "sauce" or "drink",
+  "name": "product name",
+  "maker": "brand/manufacturer",
+  "style": "style category",
+  "keywords": ["relevant", "search", "keywords"]
+}
+
+Style examples:
+- For sauces: Habanero, Ghost Pepper, Chipotle, Cayenne, Carolina Reaper, Sriracha, Buffalo
+- For drinks: Kombucha, NA Beer, Mocktail, Juice, Soda, Sparkling Water, Tea, Coffee, Smoothie, Sports Drink
+
+Use null for any field you cannot determine.`;
   const payload = buildVisionPrompt(instructions, imageBase64, imageMimeType);
   const text = await invokeClaude(payload);
   const parsed = parseJsonFromText(text);
   if (!parsed) {
     return {};
   }
+  const productType = parsed.product_type === "drink" ? "drink" : "sauce";
   return {
+    productType,
     name: typeof parsed.name === "string" ? parsed.name : undefined,
     maker: typeof parsed.maker === "string" ? parsed.maker : undefined,
     style: typeof parsed.style === "string" ? parsed.style : undefined,
-    heatVendor: clampScore(normalizeNumber(parsed.heat_vendor)),
-    tastingNotesVendor: typeof parsed.tasting_notes_vendor === "string" ? parsed.tasting_notes_vendor : undefined,
-    productUrl: typeof parsed.product_url === "string" ? parsed.product_url : undefined,
     keywords: Array.isArray(parsed.keywords) ? parsed.keywords.filter((item) => typeof item === "string") : undefined
   };
+};
+
+export type BackImageExtraction = {
+  nutritionFacts?: NutritionFacts;
+  ingredients?: string[];
+};
+
+export const runBackImageExtraction = async (imageBase64: string, imageMimeType: string): Promise<BackImageExtraction> => {
+  const instructions = `Extract nutrition facts and ingredients from this hot sauce label image.
+
+Return JSON with exactly these keys:
+{
+  "nutrition_facts": {
+    "serving_size": "e.g. 1 tsp (5g)",
+    "calories": number or null,
+    "total_fat": "e.g. 0g",
+    "sodium": "e.g. 190mg",
+    "total_carbs": "e.g. 1g",
+    "sugars": "e.g. 0g",
+    "protein": "e.g. 0g"
+  },
+  "ingredients": ["ingredient1", "ingredient2", ...]
+}
+
+Guidelines:
+- Look for "Nutrition Facts" panel - extract serving size and per-serving values
+- Include units with values (mg, g, etc.) except calories which is just a number
+- For ingredients, find the ingredients list (usually starts with "Ingredients:")
+- List each ingredient separately, in order shown on label
+- Simplify ingredient names: "Red Habanero Peppers" not "Red Habanero Peppers (Capsicum chinense)"
+- Use null for any nutrition value not visible or legible
+- If no nutrition panel visible, set nutrition_facts to null
+- If no ingredients list visible, set ingredients to empty array`;
+  const payload = buildVisionPrompt(instructions, imageBase64, imageMimeType);
+  const text = await invokeClaude(payload);
+  const parsed = parseJsonFromText(text);
+  if (!parsed) {
+    return {};
+  }
+  const rawNutrition = parsed.nutrition_facts as Record<string, unknown> | undefined;
+  const nutritionFacts: NutritionFacts | undefined = rawNutrition ? {
+    servingSize: typeof rawNutrition.serving_size === "string" ? rawNutrition.serving_size : undefined,
+    calories: normalizeNumber(rawNutrition.calories) ?? undefined,
+    totalFat: typeof rawNutrition.total_fat === "string" ? rawNutrition.total_fat : undefined,
+    sodium: typeof rawNutrition.sodium === "string" ? rawNutrition.sodium : undefined,
+    totalCarbs: typeof rawNutrition.total_carbs === "string" ? rawNutrition.total_carbs : undefined,
+    sugars: typeof rawNutrition.sugars === "string" ? rawNutrition.sugars : undefined,
+    protein: typeof rawNutrition.protein === "string" ? rawNutrition.protein : undefined
+  } : undefined;
+  const ingredients = Array.isArray(parsed.ingredients)
+    ? parsed.ingredients.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : undefined;
+  return { nutritionFacts, ingredients };
 };
 
 const extractFromSearchResults = async (
@@ -1142,7 +1212,7 @@ const mapMediaFormat = (mimeType: string): "mp3" | "mp4" | "wav" | "flac" | "ogg
 };
 
 export const transcribeVoice = async (s3Uri: string, mimeType: string): Promise<string> => {
-  const jobName = `hotsauce-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const jobName = `scorchbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const startCommand = new StartTranscriptionJobCommand({
     TranscriptionJobName: jobName,
     LanguageCode: transcribeLanguage,

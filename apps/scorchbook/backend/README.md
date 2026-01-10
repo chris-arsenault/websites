@@ -1,4 +1,4 @@
-# Hot Sauce Backend
+# Scorchbook Backend
 
 AWS Lambda (Node.js/TypeScript) for hot sauce tasting entries.
 
@@ -17,9 +17,9 @@ The Lambda reads configuration from environment variables; `.env.example` shows 
 
 Core settings:
 
-- `TABLE_NAME` (default: `hotsauce-ffcf7631-tastings`)
-- `MEDIA_BUCKET` (default: `hotsauce-ffcf7631-media`)
-- `PUBLIC_MEDIA_BASE_URL` (default: `https://hotsauce-ffcf7631-media.s3.amazonaws.com`, fallback is `s3://` URLs)
+- `TABLE_NAME` (default: `scorchbook-ffcf7631-tastings`)
+- `MEDIA_BUCKET` (default: `scorchbook-ffcf7631-media`)
+- `PUBLIC_MEDIA_BASE_URL` (default: `https://scorchbook-ffcf7631-media.s3.amazonaws.com`, fallback is `s3://` URLs)
 - `COGNITO_USER_POOL_ID` (deployment-specific)
 - `COGNITO_CLIENT_ID` (deployment-specific)
 - `ALLOWED_ORIGINS` (default: `http://localhost:5173,https://sauce.ahara.io`)

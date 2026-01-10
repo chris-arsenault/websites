@@ -3,11 +3,11 @@ import { NewsArticle } from './types';
 export const news: NewsArticle[] = [
   {
     id: 'scorchbook-2026-01-09',
-    projectId: 'hotsauce',
+    projectId: 'scorchbook',
     title: 'Scorchbook Exits Beta, F̶e̶a̶t̶u̶r̶e̶s̶ Fire Complete',
     date: '2026-01-09',
     content: `After months of rigorous hot sauce consumption (someone had to do it), Scorchbook is officially production-ready. The app now features delete and rerun capabilities for those unfortunate moments when the AI mistakes your artisanal ghost pepper reduction for ketchup. We've also polished the UI to be as smooth as a well-aged habanero ferment. Your tongue may burn, but at least your app experience won't.`,
-    tags: ['release', 'hotsauce', 'ai'],
+    tags: ['release', 'scorchbook', 'ai'],
   },
   {
     id: 'canonry-2026-01-08',

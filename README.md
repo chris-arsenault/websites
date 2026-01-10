@@ -6,7 +6,7 @@ Monorepo for small web properties under `apps/` with shared Terraform in `infras
 
 ## Apps
 
-- `apps/hotsauce` - Scorchbook, a hot sauce tasting tracker (Vite + React frontend, Node.js Lambda backend).
+- `apps/scorchbook` - Scorchbook, a hot sauce tasting tracker (Vite + React frontend, Node.js Lambda backend).
 - `apps/ru-ai.net` - Static site with a small Lambda-powered backend.
 - `apps/ahara.io` - Vite + React project portfolio site.
 - `apps/stack-atlas` - Stack Atlas, a tech stack standardization explorer (Vite + React).

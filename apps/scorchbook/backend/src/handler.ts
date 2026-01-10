@@ -8,10 +8,9 @@ import { downloadMediaBase64, parseBase64Data, uploadMedia } from "./services/me
 import {
   extractVoiceMetrics,
   formatTastingNotes,
+  runBackImageExtraction,
   runImageExtraction,
-  runSearchEnrichment,
-  transcribeVoice,
-  type SearchContext
+  transcribeVoice
 } from "./services/agentic";
 import { sanitizeOptional } from "./utils/sanitize";
 import { jsonResponse, emptyResponse } from "./utils/http";
@@ -94,10 +93,11 @@ type ProcessEvent = {
   action: "process";
   recordId: string;
   imageKey?: string;
+  backImageKey?: string;
   voiceKey?: string;
   imageMimeType?: string;
+  backImageMimeType?: string;
   voiceMimeType?: string;
-  forceSearch?: boolean;
   forceVoice?: boolean;
 };
 
@@ -128,6 +128,8 @@ const buildRecord = (input: CreateTastingInput, nowIso: string, createdBy?: stri
     style: normalizeString(input.style),
     heatUser: input.heatUser ?? null,
     heatVendor: input.heatVendor ?? null,
+    refreshing: input.refreshing ?? null,
+    sweet: input.sweet ?? null,
     tastingNotesUser: normalizeString(input.tastingNotesUser),
     tastingNotesVendor: normalizeString(input.tastingNotesVendor),
     productUrl: normalizeString(input.productUrl),
@@ -179,43 +181,28 @@ const processTastingAsync = async (payload: ProcessEvent) => {
       const imageMimeType = media.contentType ?? payload.imageMimeType ?? "image/jpeg";
       const imageExtraction = await runImageExtraction(media.base64, imageMimeType);
       applyEnrichment(record, {
+        productType: imageExtraction.productType,
         name: imageExtraction.name,
         maker: imageExtraction.maker,
-        style: imageExtraction.style,
-        heatVendor: imageExtraction.heatVendor ?? null,
-        tastingNotesVendor: imageExtraction.tastingNotesVendor,
-        productUrl: imageExtraction.productUrl
+        style: imageExtraction.style
       });
       await updateRecordStatus(record, "image_extracted");
+    }
 
-      const searchContext: SearchContext = {
-        name: record.name || imageExtraction.name,
-        maker: record.maker || imageExtraction.maker,
-        style: record.style || imageExtraction.style,
-        keywords: imageExtraction.keywords
-      };
-      logInfo("agent.search.start", {
-        recordId: record.id,
-        context: searchContext,
-        candidateUrls: [imageExtraction.productUrl, record.productUrl].filter(Boolean)
-      });
-      const search = await runSearchEnrichment(searchContext, [imageExtraction.productUrl, record.productUrl]);
+    if (payload.backImageKey) {
+      const media = await downloadMediaBase64(payload.backImageKey);
+      const backImageMimeType = media.contentType ?? payload.backImageMimeType ?? "image/jpeg";
+      const backExtraction = await runBackImageExtraction(media.base64, backImageMimeType);
       applyEnrichment(record, {
-        name: search.searchFields.name,
-        maker: search.searchFields.maker,
-        style: search.searchFields.style,
-        heatVendor: search.searchFields.heatVendor ?? null,
-        tastingNotesVendor: search.searchFields.tastingNotesVendor,
-        productUrl: search.searchFields.productUrl
-      }, {
-        overwriteKeys: payload.forceSearch ? ["heatVendor", "tastingNotesVendor", "productUrl"] : []
+        nutritionFacts: backExtraction.nutritionFacts,
+        ingredients: backExtraction.ingredients
       });
-      logInfo("agent.search.complete", {
+      logInfo("agent.back.complete", {
         recordId: record.id,
-        searchCount: search.searchCount,
-        bestResultUrl: search.bestResultUrl
+        hasNutrition: !!backExtraction.nutritionFacts,
+        ingredientCount: backExtraction.ingredients?.length ?? 0
       });
-      await updateRecordStatus(record, "image_enriched");
+      await updateRecordStatus(record, "back_extracted");
     }
 
     if (payload.voiceKey) {
@@ -308,18 +295,28 @@ export const handler = async (
       const record = buildRecord(parsed, nowIso, user.sub);
 
       const imagePayload = parseBase64Data(parsed.imageBase64, parsed.imageMimeType);
+      const backImagePayload = parseBase64Data(parsed.backImageBase64, parsed.backImageMimeType);
       const voicePayload = parseBase64Data(parsed.voiceBase64, parsed.voiceMimeType);
       const agentImageMimeType = normalizeMimeType(imagePayload?.contentType ?? parsed.imageMimeType);
+      const agentBackImageMimeType = normalizeMimeType(backImagePayload?.contentType ?? parsed.backImageMimeType);
       const agentVoiceMimeType = normalizeMimeType(voicePayload?.contentType ?? parsed.voiceMimeType);
 
       let imageUrl: string | undefined;
       let imageKey: string | undefined;
+      let backImageUrl: string | undefined;
+      let backImageKey: string | undefined;
       let voiceKey: string | undefined;
 
       if (imagePayload) {
         const ext = imagePayload.contentType.split("/")[1] ?? "jpg";
         imageKey = `images/${record.id}-${Date.now()}.${ext}`;
         imageUrl = await uploadMedia(imageKey, imagePayload);
+      }
+
+      if (backImagePayload) {
+        const ext = backImagePayload.contentType.split("/")[1] ?? "jpg";
+        backImageKey = `images/${record.id}-back-${Date.now()}.${ext}`;
+        backImageUrl = await uploadMedia(backImageKey, backImagePayload);
       }
 
       if (voicePayload) {
@@ -331,6 +328,8 @@ export const handler = async (
 
       record.imageUrl = imageUrl;
       record.imageKey = imageKey;
+      record.backImageUrl = backImageUrl;
+      record.backImageKey = backImageKey;
       record.voiceKey = voiceKey;
 
       await createTasting(record);
@@ -339,8 +338,10 @@ export const handler = async (
           action: "process",
           recordId: record.id,
           imageKey,
+          backImageKey,
           voiceKey,
           imageMimeType: agentImageMimeType,
+          backImageMimeType: agentBackImageMimeType,
           voiceMimeType: agentVoiceMimeType
         });
       } catch (error) {
@@ -379,13 +380,14 @@ export const handler = async (
       if (record.createdBy && record.createdBy !== user.sub) {
         return jsonResponse(403, { message: "Forbidden" }, corsHeaders);
       }
-      if (!record.imageKey && !record.voiceKey) {
+      if (!record.imageKey && !record.backImageKey && !record.voiceKey) {
         return jsonResponse(400, { message: "No media available to process" }, corsHeaders);
       }
 
       await updateRecordStatus(record, "pending");
 
       const imageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.imageKey));
+      const backImageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.backImageKey));
       const voiceMimeType = normalizeMimeType(inferMimeTypeFromKey(record.voiceKey));
 
       try {
@@ -393,10 +395,11 @@ export const handler = async (
           action: "process",
           recordId: record.id,
           imageKey: record.imageKey,
+          backImageKey: record.backImageKey,
           voiceKey: record.voiceKey,
           imageMimeType,
+          backImageMimeType,
           voiceMimeType,
-          forceSearch: true,
           forceVoice: true
         });
       } catch (error) {

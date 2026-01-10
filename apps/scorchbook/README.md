@@ -1,4 +1,4 @@
-# Hot Sauce Tasting Tracker
+# Scorchbook Tasting Tracker
 
 Vite + React UI with a Node.js Lambda API for logging hot sauce tastings.
 
@@ -16,9 +16,9 @@ This app targets a single deployment, so defaults are baked in and documented fo
 
 - App URL: https://sauce.ahara.io
 - API URL: https://sauce-api.ahara.io
-- Resource prefix: hotsauce-ffcf7631 (table and buckets)
+- Resource prefix: scorchbook-ffcf7631 (table and buckets)
 - Allowed origins: http://localhost:5173, https://sauce.ahara.io
-- Public media base: https://hotsauce-ffcf7631-media.s3.amazonaws.com
+- Public media base: https://scorchbook-ffcf7631-media.s3.amazonaws.com
 - Model tuning: anthropic.claude-3-haiku-20240307-v1:0, en-US, poll 1500ms, max polls 40
 - Tavily key: loaded from Secrets Manager entry tavily/dev in deployed environments
 

@@ -17,7 +17,7 @@ const repoMap = {
   'the-canonry': { path: join(parentDir, 'penguin-tales'), type: 'external' }, // Same repo as penguin-tales
   'penguin-tales': { path: join(parentDir, 'penguin-tales'), type: 'external' },
   'tsonu-music': { path: join(parentDir, 'tsonu-music'), type: 'external' },
-  'hotsauce': { path: join(websitesRoot, 'apps/hotsauce'), type: 'internal' },
+  'scorchbook': { path: join(websitesRoot, 'apps/scorchbook'), type: 'internal' },
   'ru-ai': { path: join(websitesRoot, 'apps/ru-ai.net'), type: 'internal' },
   'slipstream': { path: join(parentDir, 'slipstream'), type: 'external' },
 };

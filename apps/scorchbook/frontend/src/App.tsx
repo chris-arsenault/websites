@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import Fuse from "fuse.js";
 import "./App.css";
 import { createTasting, deleteTasting, fetchTastings, rerunTasting } from "./api";
 import { getSession, signIn, signOut } from "./auth";
-import type { CreateTastingInput, Filters, TastingRecord } from "./types";
+import type { CreateTastingInput, Filters, ProductType, TastingRecord } from "./types";
+
+const getStoredProductType = (): ProductType | "all" => {
+  const stored = localStorage.getItem("productTypeFilter");
+  if (stored === "sauce" || stored === "drink" || stored === "all") return stored;
+  return "all";
+};
 
 const defaultFilters: Filters = {
+  productType: getStoredProductType(),
   search: "",
   style: "",
+  ingredient: "",
   minScore: "",
   minHeat: "",
   date: "",
@@ -21,6 +30,8 @@ const emptyForm = {
   style: "",
   heatUser: "",
   heatVendor: "",
+  refreshing: "",
+  sweet: "",
   tastingNotesUser: "",
   tastingNotesVendor: "",
   productUrl: ""
@@ -32,7 +43,7 @@ type AuthState = {
   username: string;
 };
 
-type FormMode = "add" | "edit";
+type FormMode = "add" | "edit" | "view";
 
 const toNumberOrNull = (value: string) => {
   if (!value.trim()) return null;
@@ -158,6 +169,78 @@ const HeatDisplay = ({ value, max = 5 }: { value: number | null; max?: number })
   );
 };
 
+// Display droplets for refreshing level (read-only)
+const RefreshDisplay = ({ value, max = 5 }: { value: number | null; max?: number }) => {
+  if (value === null) return <span className="refresh-empty">-</span>;
+  const filled = Math.min(Math.round(value), max);
+  return (
+    <span className="refresh-display">
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`droplet-icon ${i < filled ? "filled" : "empty"}`}>💧</span>
+      ))}
+    </span>
+  );
+};
+
+// Display candy for sweetness level (read-only)
+const SweetDisplay = ({ value, max = 5 }: { value: number | null; max?: number }) => {
+  if (value === null) return <span className="sweet-empty">-</span>;
+  const filled = Math.min(Math.round(value), max);
+  return (
+    <span className="sweet-display">
+      {Array.from({ length: max }, (_, i) => (
+        <span key={i} className={`candy-icon ${i < filled ? "filled" : "empty"}`}>🍬</span>
+      ))}
+    </span>
+  );
+};
+
+// Droplet Selector for forms (1-5 scale)
+const DropletSelector = ({ value, onChange, label, showLabel = true }: { value: number | string; onChange: (val: string) => void; label?: string; showLabel?: boolean }) => {
+  const numValue = typeof value === "string" ? (value ? parseInt(value, 10) : 0) : value;
+  return (
+    <div className="droplet-selector">
+      {showLabel && label && <span className="selector-label">{label}</span>}
+      <div className="droplet-row">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <button
+            type="button"
+            key={level}
+            className={`droplet-btn ${numValue >= level ? "active" : ""}`}
+            onClick={() => onChange(numValue === level ? "" : String(level))}
+            title={`Refreshing level ${level}`}
+          >
+            <span className="droplet">💧</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Candy Selector for forms (1-5 scale)
+const CandySelector = ({ value, onChange, label, showLabel = true }: { value: number | string; onChange: (val: string) => void; label?: string; showLabel?: boolean }) => {
+  const numValue = typeof value === "string" ? (value ? parseInt(value, 10) : 0) : value;
+  return (
+    <div className="candy-selector">
+      {showLabel && label && <span className="selector-label">{label}</span>}
+      <div className="candy-row">
+        {[1, 2, 3, 4, 5].map((level) => (
+          <button
+            type="button"
+            key={level}
+            className={`candy-btn ${numValue >= level ? "active" : ""}`}
+            onClick={() => onChange(numValue === level ? "" : String(level))}
+            title={`Sweetness level ${level}`}
+          >
+            <span className="candy">🍬</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Display score as visual bar
 const ScoreDisplay = ({ value }: { value: number | null }) => {
   if (value === null) return <span className="score-empty">-</span>;
@@ -212,16 +295,23 @@ const App = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("add");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewingRecord, setViewingRecord] = useState<TastingRecord | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [showManualFields, setShowManualFields] = useState(false);
 
   // Media state
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const backVideoRef = useRef<HTMLVideoElement | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [backCameraActive, setBackCameraActive] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const [imageBase64, setImageBase64] = useState("");
   const [imageMimeType, setImageMimeType] = useState("");
+  const [backImagePreview, setBackImagePreview] = useState("");
+  const [backImageBase64, setBackImageBase64] = useState("");
+  const [backImageMimeType, setBackImageMimeType] = useState("");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [backCameraStream, setBackCameraStream] = useState<MediaStream | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
@@ -293,6 +383,11 @@ const App = () => {
     loadTastings();
   }, []);
 
+  // Persist productType filter to localStorage
+  useEffect(() => {
+    localStorage.setItem("productTypeFilter", filters.productType);
+  }, [filters.productType]);
+
   useEffect(() => {
     if (!formOpen) {
       stopCamera();
@@ -320,11 +415,31 @@ const App = () => {
   }, [cameraStream, cameraActive]);
 
   useEffect(() => {
+    const video = backVideoRef.current;
+    if (!backCameraStream || !backCameraActive || !video) return;
+    video.srcObject = backCameraStream;
+    const startPreview = async () => {
+      try {
+        await video.play();
+      } catch {
+        setErrorMessage("Unable to start camera preview.");
+      }
+    };
+    startPreview();
+    return () => {
+      if (video.srcObject === backCameraStream) {
+        video.srcObject = null;
+      }
+    };
+  }, [backCameraStream, backCameraActive]);
+
+  useEffect(() => {
     return () => {
       cameraStream?.getTracks().forEach((track) => track.stop());
+      backCameraStream?.getTracks().forEach((track) => track.stop());
       audioStream?.getTracks().forEach((track) => track.stop());
     };
-  }, [cameraStream, audioStream]);
+  }, [cameraStream, backCameraStream, audioStream]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -338,10 +453,16 @@ const App = () => {
   const filteredTastings = useMemo(() => {
     const lowerSearch = filters.search.trim().toLowerCase();
     const lowerStyle = filters.style.trim().toLowerCase();
+    const ingredientQuery = filters.ingredient.trim();
     const minScore = filters.minScore ? Number(filters.minScore) : null;
     const minHeat = filters.minHeat ? Number(filters.minHeat) : null;
 
-    const results = tastings.filter((item) => {
+    let results = tastings.filter((item) => {
+      // Product type filter (treat undefined as "sauce" for backwards compatibility)
+      if (filters.productType !== "all") {
+        const itemType = item.productType ?? "sauce";
+        if (itemType !== filters.productType) return false;
+      }
       if (lowerSearch) {
         const combined = `${item.name} ${item.maker}`.toLowerCase();
         if (!combined.includes(lowerSearch)) return false;
@@ -353,6 +474,17 @@ const App = () => {
       return true;
     });
 
+    // Fuzzy ingredient search with Fuse.js
+    if (ingredientQuery && results.length > 0) {
+      const fuse = new Fuse(results, {
+        keys: ["ingredients"],
+        threshold: 0.4,
+        ignoreLocation: true,
+        useExtendedSearch: true
+      });
+      results = fuse.search(ingredientQuery).map((r) => r.item);
+    }
+
     return [...results].sort((a, b) => {
       if (filters.sortBy === "name") return a.name.localeCompare(b.name);
       if (filters.sortBy === "score") return (b.score ?? -1) - (a.score ?? -1);
@@ -362,7 +494,7 @@ const App = () => {
     });
   }, [filters, tastings]);
 
-  const activeFilterCount = [filters.minScore, filters.minHeat, filters.style, filters.date].filter(Boolean).length;
+  const activeFilterCount = [filters.minScore, filters.minHeat, filters.style, filters.ingredient, filters.date].filter(Boolean).length;
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -398,6 +530,7 @@ const App = () => {
   const openEditForm = (record: TastingRecord) => {
     setFormMode("edit");
     setEditingId(record.id);
+    setViewingRecord(record);
     setForm({
       name: record.name || "",
       maker: record.maker || "",
@@ -406,12 +539,39 @@ const App = () => {
       style: record.style || "",
       heatUser: record.heatUser !== null ? String(record.heatUser) : "",
       heatVendor: record.heatVendor !== null ? String(record.heatVendor) : "",
+      refreshing: record.refreshing !== null ? String(record.refreshing) : "",
+      sweet: record.sweet !== null ? String(record.sweet) : "",
       tastingNotesUser: record.tastingNotesUser || "",
       tastingNotesVendor: record.tastingNotesVendor || "",
       productUrl: record.productUrl || ""
     });
     setShowManualFields(true);
     setImagePreview(record.imageUrl || "");
+    setBackImagePreview(record.backImageUrl || "");
+    setFormOpen(true);
+  };
+
+  const openViewForm = (record: TastingRecord) => {
+    setFormMode("view");
+    setEditingId(null);
+    setViewingRecord(record);
+    setForm({
+      name: record.name || "",
+      maker: record.maker || "",
+      date: record.date || "",
+      score: record.score !== null ? String(record.score) : "",
+      style: record.style || "",
+      heatUser: record.heatUser !== null ? String(record.heatUser) : "",
+      heatVendor: record.heatVendor !== null ? String(record.heatVendor) : "",
+      refreshing: record.refreshing !== null ? String(record.refreshing) : "",
+      sweet: record.sweet !== null ? String(record.sweet) : "",
+      tastingNotesUser: record.tastingNotesUser || "",
+      tastingNotesVendor: record.tastingNotesVendor || "",
+      productUrl: record.productUrl || ""
+    });
+    setShowManualFields(true);
+    setImagePreview(record.imageUrl || "");
+    setBackImagePreview(record.backImageUrl || "");
     setFormOpen(true);
   };
 
@@ -419,6 +579,7 @@ const App = () => {
     setFormOpen(false);
     setFormMode("add");
     setEditingId(null);
+    setViewingRecord(null);
     setShowManualFields(false);
     clearMedia();
   };
@@ -427,6 +588,9 @@ const App = () => {
     setImagePreview("");
     setImageBase64("");
     setImageMimeType("");
+    setBackImagePreview("");
+    setBackImageBase64("");
+    setBackImageMimeType("");
     setAudioUrl("");
     setAudioBase64("");
     setAudioMimeType("");
@@ -484,6 +648,58 @@ const App = () => {
     setImageMimeType("");
   };
 
+  const startBackCamera = async () => {
+    setErrorMessage("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      setBackCameraStream(stream);
+      setBackCameraActive(true);
+    } catch {
+      setErrorMessage("Camera access denied or unavailable.");
+    }
+  };
+
+  const stopBackCamera = () => {
+    backCameraStream?.getTracks().forEach((track) => track.stop());
+    if (backVideoRef.current) {
+      backVideoRef.current.srcObject = null;
+    }
+    setBackCameraStream(null);
+    setBackCameraActive(false);
+  };
+
+  const captureBackPhoto = async () => {
+    if (!backVideoRef.current) {
+      setErrorMessage("Camera preview is not ready.");
+      return;
+    }
+    const video = backVideoRef.current;
+    await waitForVideoReady(video);
+    const canvas = document.createElement("canvas");
+    const { width, height } = getVideoDimensions(video, backCameraStream);
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const base64Payload = dataUrl.split(",")[1] ?? "";
+    if (base64Payload.length < 100) {
+      setErrorMessage("Unable to capture photo. Try again.");
+      return;
+    }
+    setBackImagePreview(dataUrl);
+    setBackImageBase64(dataUrl);
+    setBackImageMimeType("image/jpeg");
+    stopBackCamera();
+  };
+
+  const clearBackPhoto = () => {
+    setBackImagePreview("");
+    setBackImageBase64("");
+    setBackImageMimeType("");
+  };
+
   const startRecording = async () => {
     setErrorMessage("");
     try {
@@ -523,7 +739,7 @@ const App = () => {
     setAudioMimeType("");
   };
 
-  const hasMedia = Boolean(imageBase64 || audioBase64);
+  const hasMedia = Boolean(imageBase64 || backImageBase64 || audioBase64);
   const hasManualData = Boolean(form.name.trim() || form.maker.trim());
 
   const handleSubmit = async (event: FormEvent) => {
@@ -548,11 +764,15 @@ const App = () => {
       style: form.style.trim() || undefined,
       heatUser: toNumberOrNull(form.heatUser),
       heatVendor: toNumberOrNull(form.heatVendor),
+      refreshing: toNumberOrNull(form.refreshing),
+      sweet: toNumberOrNull(form.sweet),
       tastingNotesUser: form.tastingNotesUser.trim() || undefined,
       tastingNotesVendor: form.tastingNotesVendor.trim() || undefined,
       productUrl: form.productUrl.trim() || undefined,
       imageBase64: imageBase64 || undefined,
       imageMimeType: imageMimeType || undefined,
+      backImageBase64: backImageBase64 || undefined,
+      backImageMimeType: backImageMimeType || undefined,
       voiceBase64: audioBase64 || undefined,
       voiceMimeType: audioMimeType || undefined
     };
@@ -576,6 +796,8 @@ const App = () => {
                   style: form.style.trim() || t.style,
                   heatUser: toNumberOrNull(form.heatUser) ?? t.heatUser,
                   heatVendor: toNumberOrNull(form.heatVendor) ?? t.heatVendor,
+                  refreshing: toNumberOrNull(form.refreshing) ?? t.refreshing,
+                  sweet: toNumberOrNull(form.sweet) ?? t.sweet,
                   tastingNotesUser: form.tastingNotesUser.trim() || t.tastingNotesUser,
                   tastingNotesVendor: form.tastingNotesVendor.trim() || t.tastingNotesVendor,
                   productUrl: form.productUrl.trim() || t.productUrl,
@@ -677,13 +899,42 @@ const App = () => {
     }
   };
 
+  const brandName = filters.productType === "drink" ? "Quenchbook" : "Scorchbook";
+  const brandTagline = filters.productType === "drink" ? "Drink Log" : filters.productType === "all" ? "Taste Log" : "Hot Sauce Log";
+  const searchPlaceholder = filters.productType === "drink" ? "Search drinks..." : filters.productType === "all" ? "Search..." : "Search sauces...";
+  const itemLabel = filters.productType === "drink" ? "drink" : filters.productType === "all" ? "item" : "sauce";
+
   return (
-    <div className="app">
+    <div className={`app ${filters.productType === "drink" ? "theme-drink" : "theme-sauce"}`}>
       {/* Compact Header */}
       <header className="header">
         <div className="header-brand">
-          <h1>Scorchbook</h1>
-          <span className="header-tagline">Hot Sauce Log</span>
+          <h1>{brandName}</h1>
+          <span className="header-tagline">{brandTagline}</span>
+        </div>
+
+        <div className="product-toggle">
+          <button
+            className={filters.productType === "sauce" ? "active" : ""}
+            onClick={() => setFilters((f) => ({ ...f, productType: "sauce" }))}
+            title="Hot Sauces"
+          >
+            Sauces
+          </button>
+          <button
+            className={filters.productType === "all" ? "active" : ""}
+            onClick={() => setFilters((f) => ({ ...f, productType: "all" }))}
+            title="All Items"
+          >
+            All
+          </button>
+          <button
+            className={filters.productType === "drink" ? "active" : ""}
+            onClick={() => setFilters((f) => ({ ...f, productType: "drink" }))}
+            title="Drinks"
+          >
+            Drinks
+          </button>
         </div>
 
         <div className="header-actions">
@@ -749,7 +1000,7 @@ const App = () => {
             <span className="search-icon">🔍</span>
             <input
               type="search"
-              placeholder="Search sauces..."
+              placeholder={searchPlaceholder}
               value={filters.search}
               onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
             />
@@ -768,6 +1019,10 @@ const App = () => {
                 <input placeholder="e.g. Habanero" value={filters.style} onChange={(e) => setFilters((prev) => ({ ...prev, style: e.target.value }))} />
               </div>
               <div className="filter-field">
+                <label>Ingredient</label>
+                <input placeholder="e.g. Garlic" value={filters.ingredient} onChange={(e) => setFilters((prev) => ({ ...prev, ingredient: e.target.value }))} />
+              </div>
+              <div className="filter-field">
                 <label>Date</label>
                 <input type="date" value={filters.date} onChange={(e) => setFilters((prev) => ({ ...prev, date: e.target.value }))} />
               </div>
@@ -781,80 +1036,123 @@ const App = () => {
 
       {errorMessage && <div className="error-banner">{errorMessage}</div>}
 
-      {/* Add/Edit Form */}
+      {/* Add/Edit Form Modal */}
       {formOpen && (
-        <section className="add-panel">
-          <div className="form-header">
-            <h2>{formMode === "edit" ? "Edit Tasting" : "New Tasting"}</h2>
-            <button type="button" className="close-btn" onClick={closeForm}>×</button>
-          </div>
+        <div className="form-overlay" onClick={closeForm}>
+          <section className="form-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="form-header">
+              <h2>{formMode === "view" ? "Tasting Details" : formMode === "edit" ? "Edit Tasting" : "New Tasting"}</h2>
+              <button type="button" className="close-btn" onClick={closeForm}>×</button>
+            </div>
 
-          <form className="add-form" onSubmit={handleSubmit}>
-            {/* Media Capture - Primary */}
-            <div className="media-primary">
-              <p className="media-hint">
-                {formMode === "add"
-                  ? "Capture a photo and/or record your tasting notes. Our AI will extract the details."
-                  : "Update the photo or recording, or edit the fields below."}
-              </p>
+            <form className="add-form" onSubmit={handleSubmit}>
+            {/* Media Section */}
+            {formMode === "view" ? (
+              <div className="media-view">
+                {(imagePreview || backImagePreview) && (
+                  <div className="media-row">
+                    {imagePreview && (
+                      <div className="media-preview-view">
+                        <span className="media-label">Front</span>
+                        <img src={imagePreview} alt="Bottle" />
+                      </div>
+                    )}
+                    {backImagePreview && (
+                      <div className="media-preview-view">
+                        <span className="media-label">Back</span>
+                        <img src={backImagePreview} alt="Label" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="media-primary">
+                <p className="media-hint">
+                  {formMode === "add"
+                    ? "Capture a photo and/or record your tasting notes. Our AI will extract the details."
+                    : "Update the photo or recording, or edit the fields below."}
+                </p>
 
-              <div className="media-row">
-                <div className="media-capture">
-                  <span className="media-label">📷 Photo</span>
-                  {imagePreview ? (
-                    <div className="media-preview">
-                      <img src={imagePreview} alt="Bottle" />
-                      <button type="button" className="media-clear" onClick={clearPhoto}>Remove</button>
-                    </div>
-                  ) : cameraActive ? (
-                    <div className="camera-active">
-                      <video ref={videoRef} playsInline muted autoPlay />
-                      <button type="button" className="capture-btn" onClick={capturePhoto}>Capture</button>
-                    </div>
-                  ) : (
-                    <button type="button" className="media-start" onClick={startCamera}>
-                      Open Camera
-                    </button>
-                  )}
-                </div>
+                <div className="media-row">
+                  <div className="media-capture">
+                    <span className="media-label">📷 Front (Bottle)</span>
+                    {imagePreview ? (
+                      <div className="media-preview">
+                        <img src={imagePreview} alt="Bottle" />
+                        <button type="button" className="media-clear" onClick={clearPhoto}>Remove</button>
+                      </div>
+                    ) : cameraActive ? (
+                      <div className="camera-active">
+                        <video ref={videoRef} playsInline muted autoPlay />
+                        <button type="button" className="capture-btn" onClick={capturePhoto}>Capture</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="media-start" onClick={startCamera}>
+                        Open Camera
+                      </button>
+                    )}
+                  </div>
 
-                <div className="media-capture">
-                  <span className="media-label">🎙️ Voice Note</span>
-                  {audioUrl ? (
-                    <div className="media-preview">
-                      <audio controls src={audioUrl} />
-                      <button type="button" className="media-clear" onClick={clearRecording}>Remove</button>
-                    </div>
-                  ) : isRecording ? (
-                    <div className="recording-active">
-                      <span className="recording-indicator">Recording...</span>
-                      <button type="button" className="stop-btn" onClick={stopRecording}>Stop</button>
-                    </div>
-                  ) : (
-                    <button type="button" className="media-start" onClick={startRecording}>
-                      Start Recording
-                    </button>
-                  )}
+                  <div className="media-capture">
+                    <span className="media-label">📷 Back (Label)</span>
+                    {backImagePreview ? (
+                      <div className="media-preview">
+                        <img src={backImagePreview} alt="Label" />
+                        <button type="button" className="media-clear" onClick={clearBackPhoto}>Remove</button>
+                      </div>
+                    ) : backCameraActive ? (
+                      <div className="camera-active">
+                        <video ref={backVideoRef} playsInline muted autoPlay />
+                        <button type="button" className="capture-btn" onClick={captureBackPhoto}>Capture</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="media-start" onClick={startBackCamera}>
+                        Open Camera
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="media-capture">
+                    <span className="media-label">🎙️ Voice Note</span>
+                    {audioUrl ? (
+                      <div className="media-preview">
+                        <audio controls src={audioUrl} />
+                        <button type="button" className="media-clear" onClick={clearRecording}>Remove</button>
+                      </div>
+                    ) : isRecording ? (
+                      <div className="recording-active">
+                        <span className="recording-indicator">Recording...</span>
+                        <button type="button" className="stop-btn" onClick={stopRecording}>Stop</button>
+                      </div>
+                    ) : (
+                      <button type="button" className="media-start" onClick={startRecording}>
+                        Start Recording
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Manual Fields Toggle */}
-            <div className="manual-toggle">
-              <label className="toggle-label">
-                <input
-                  type="checkbox"
-                  checked={showManualFields}
-                  onChange={(e) => setShowManualFields(e.target.checked)}
-                />
-                <span>{formMode === "edit" ? "Edit fields" : "Add details manually"}</span>
-              </label>
-              {!showManualFields && hasManualData && (
-                <span className="has-data-hint">Has manual data</span>
-              )}
-            </div>
+            {/* Manual Fields Toggle - hide in view mode */}
+            {formMode !== "view" && (
+              <div className="manual-toggle">
+                <label className="toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={showManualFields}
+                    onChange={(e) => setShowManualFields(e.target.checked)}
+                  />
+                  <span>{formMode === "edit" ? "Edit fields" : "Add details manually"}</span>
+                </label>
+                {!showManualFields && hasManualData && (
+                  <span className="has-data-hint">Has manual data</span>
+                )}
+              </div>
+            )}
 
-            {/* Manual Fields */}
+            {/* Fields - readonly in view mode */}
             {showManualFields && (
               <div className="manual-fields">
                 <div className="form-grid">
@@ -864,6 +1162,7 @@ const App = () => {
                       value={form.name}
                       onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder="Sauce name"
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -872,6 +1171,7 @@ const App = () => {
                       value={form.maker}
                       onChange={(e) => setForm((prev) => ({ ...prev, maker: e.target.value }))}
                       placeholder="Brand/Maker"
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -880,6 +1180,7 @@ const App = () => {
                       value={form.style}
                       onChange={(e) => setForm((prev) => ({ ...prev, style: e.target.value }))}
                       placeholder="e.g. Habanero"
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -888,6 +1189,7 @@ const App = () => {
                       type="date"
                       value={form.date}
                       onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label className="span-2">
@@ -897,23 +1199,61 @@ const App = () => {
                       value={form.productUrl}
                       onChange={(e) => setForm((prev) => ({ ...prev, productUrl: e.target.value }))}
                       placeholder="https://..."
+                      readOnly={formMode === "view"}
                     />
                   </label>
                 </div>
 
                 <div className="rating-section">
                   <div className="rating-group">
-                    <span className="rating-title">Your Score (0-10)</span>
-                    <ScoreSelector value={form.score} onChange={(val) => setForm((prev) => ({ ...prev, score: val }))} showLabel={false} />
+                    <span className="rating-title">Score</span>
+                    {formMode === "view" ? (
+                      <ScoreDisplay value={viewingRecord?.score ?? null} />
+                    ) : (
+                      <ScoreSelector value={form.score} onChange={(val) => setForm((prev) => ({ ...prev, score: val }))} showLabel={false} />
+                    )}
                   </div>
-                  <div className="rating-group">
-                    <span className="rating-title">Your Heat (1-5)</span>
-                    <PepperSelector value={form.heatUser} onChange={(val) => setForm((prev) => ({ ...prev, heatUser: val }))} showLabel={false} />
-                  </div>
-                  <div className="rating-group">
-                    <span className="rating-title">Vendor Heat (1-5)</span>
-                    <PepperSelector value={form.heatVendor} onChange={(val) => setForm((prev) => ({ ...prev, heatVendor: val }))} showLabel={false} />
-                  </div>
+                  {/* Show sauce ratings for sauces, drink ratings for drinks, or all for add mode */}
+                  {(viewingRecord?.productType ?? "sauce") === "sauce" || formMode === "add" ? (
+                    <>
+                      <div className="rating-group">
+                        <span className="rating-title">Your Heat</span>
+                        {formMode === "view" ? (
+                          <HeatDisplay value={viewingRecord?.heatUser ?? null} />
+                        ) : (
+                          <PepperSelector value={form.heatUser} onChange={(val) => setForm((prev) => ({ ...prev, heatUser: val }))} showLabel={false} />
+                        )}
+                      </div>
+                      <div className="rating-group">
+                        <span className="rating-title">Vendor Heat</span>
+                        {formMode === "view" ? (
+                          <HeatDisplay value={viewingRecord?.heatVendor ?? null} />
+                        ) : (
+                          <PepperSelector value={form.heatVendor} onChange={(val) => setForm((prev) => ({ ...prev, heatVendor: val }))} showLabel={false} />
+                        )}
+                      </div>
+                    </>
+                  ) : null}
+                  {(viewingRecord?.productType ?? "sauce") === "drink" || formMode === "add" ? (
+                    <>
+                      <div className="rating-group">
+                        <span className="rating-title">Refreshing</span>
+                        {formMode === "view" ? (
+                          <RefreshDisplay value={viewingRecord?.refreshing ?? null} />
+                        ) : (
+                          <DropletSelector value={form.refreshing} onChange={(val) => setForm((prev) => ({ ...prev, refreshing: val }))} showLabel={false} />
+                        )}
+                      </div>
+                      <div className="rating-group">
+                        <span className="rating-title">Sweetness</span>
+                        {formMode === "view" ? (
+                          <SweetDisplay value={viewingRecord?.sweet ?? null} />
+                        ) : (
+                          <CandySelector value={form.sweet} onChange={(val) => setForm((prev) => ({ ...prev, sweet: val }))} showLabel={false} />
+                        )}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
 
                 <div className="notes-section">
@@ -924,6 +1264,7 @@ const App = () => {
                       value={form.tastingNotesUser}
                       onChange={(e) => setForm((prev) => ({ ...prev, tastingNotesUser: e.target.value }))}
                       placeholder="Flavor profile, impressions..."
+                      readOnly={formMode === "view"}
                     />
                   </label>
                   <label>
@@ -933,30 +1274,63 @@ const App = () => {
                       value={form.tastingNotesVendor}
                       onChange={(e) => setForm((prev) => ({ ...prev, tastingNotesVendor: e.target.value }))}
                       placeholder="Official description..."
+                      readOnly={formMode === "view"}
                     />
                   </label>
                 </div>
+
+                {/* Ingredients & Nutrition in view mode */}
+                {formMode === "view" && viewingRecord && (
+                  <>
+                    {viewingRecord.ingredients && viewingRecord.ingredients.length > 0 && (
+                      <details className="view-ingredients" open>
+                        <summary>Ingredients ({viewingRecord.ingredients.length})</summary>
+                        <div className="ingredient-pills">
+                          {viewingRecord.ingredients.map((ing, i) => (
+                            <span key={i} className="ingredient-pill">{ing}</span>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                    {viewingRecord.nutritionFacts && (
+                      <div className="view-nutrition">
+                        <span className="view-section-label">Nutrition Facts</span>
+                        <div className="nutrition-grid">
+                          {viewingRecord.nutritionFacts.servingSize && <span>Serving: {viewingRecord.nutritionFacts.servingSize}</span>}
+                          {viewingRecord.nutritionFacts.calories !== undefined && <span>Calories: {viewingRecord.nutritionFacts.calories}</span>}
+                          {viewingRecord.nutritionFacts.sodium && <span>Sodium: {viewingRecord.nutritionFacts.sodium}</span>}
+                          {viewingRecord.nutritionFacts.totalCarbs && <span>Carbs: {viewingRecord.nutritionFacts.totalCarbs}</span>}
+                          {viewingRecord.nutritionFacts.sugars && <span>Sugars: {viewingRecord.nutritionFacts.sugars}</span>}
+                          {viewingRecord.nutritionFacts.protein && <span>Protein: {viewingRecord.nutritionFacts.protein}</span>}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
             <div className="form-actions">
-              <button type="button" className="btn-ghost" onClick={closeForm}>Cancel</button>
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={submitStatus === "saving" || (formMode === "add" && !showManualFields && !hasMedia)}
-              >
-                {submitStatus === "saving" ? "Saving..." : formMode === "edit" ? "Save Changes" : "Save Tasting"}
-              </button>
+              <button type="button" className="btn-ghost" onClick={closeForm}>{formMode === "view" ? "Close" : "Cancel"}</button>
+              {formMode !== "view" && (
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={submitStatus === "saving" || (formMode === "add" && !showManualFields && !hasMedia)}
+                >
+                  {submitStatus === "saving" ? "Saving..." : formMode === "edit" ? "Save Changes" : "Save Tasting"}
+                </button>
+              )}
             </div>
           </form>
         </section>
+      </div>
       )}
 
       {/* Content */}
       <main className="content">
         <div className="content-header">
-          <span className="content-count">{filteredTastings.length} {filteredTastings.length === 1 ? "sauce" : "sauces"}</span>
+          <span className="content-count">{filteredTastings.length} {filteredTastings.length === 1 ? itemLabel : `${itemLabel}s`}</span>
         </div>
 
         {loading ? (
@@ -964,12 +1338,12 @@ const App = () => {
         ) : filteredTastings.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">🌶️</span>
-            <p>{tastings.length === 0 ? "No sauces yet. Add your first tasting!" : "No sauces match your filters."}</p>
+            <p>{tastings.length === 0 ? `No ${itemLabel}s yet. Add your first tasting!` : `No ${itemLabel}s match your filters.`}</p>
           </div>
         ) : (
           <div className="card-grid">
             {filteredTastings.map((item) => (
-              <article className={`card ${item.needsAttention ? "needs-attention" : ""}`} key={item.id}>
+              <article className={`card ${item.needsAttention ? "needs-attention" : ""} ${(item.productType ?? "sauce") === "drink" ? "card-drink" : "card-sauce"}`} key={item.id}>
                 {item.needsAttention && (
                   <div className="attention-banner">
                     <span>⚠️ Needs attention</span>
@@ -979,6 +1353,11 @@ const App = () => {
                 {item.imageUrl && (
                   <div className="card-image">
                     <img src={item.imageUrl} alt={item.name} loading="lazy" />
+                    {filters.productType === "all" && (
+                      <span className={`card-product-badge ${(item.productType ?? "sauce") === "drink" ? "badge-drink" : "badge-sauce"}`}>
+                        {(item.productType ?? "sauce") === "drink" ? "🥤" : "🌶️"}
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="card-body">
@@ -987,25 +1366,46 @@ const App = () => {
                       <h3 className="card-title">{item.name || "Untitled"}</h3>
                       <p className="card-maker">{item.maker || "Unknown"}</p>
                     </div>
-                    {auth.status === "signedIn" && (
-                      <button className="edit-btn" onClick={() => openEditForm(item)} title="Edit">
-                        ✎
+                    <div className="card-header-actions">
+                      <button className="view-btn" onClick={() => openViewForm(item)} title="View details">
+                        ⋯
                       </button>
-                    )}
+                      {auth.status === "signedIn" && (
+                        <button className="edit-btn" onClick={() => openEditForm(item)} title="Edit">
+                          ✎
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="card-ratings">
                     <div className="card-rating">
                       <span className="card-rating-label">Score</span>
                       <ScoreDisplay value={item.score} />
                     </div>
-                    <div className="card-rating">
-                      <span className="card-rating-label">Heat</span>
-                      <HeatDisplay value={item.heatUser} />
-                    </div>
+                    {(item.productType ?? "sauce") === "sauce" ? (
+                      <div className="card-rating">
+                        <span className="card-rating-label">Heat</span>
+                        <HeatDisplay value={item.heatUser} />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="card-rating">
+                          <span className="card-rating-label">Refreshing</span>
+                          <RefreshDisplay value={item.refreshing} />
+                        </div>
+                        <div className="card-rating">
+                          <span className="card-rating-label">Sweet</span>
+                          <SweetDisplay value={item.sweet} />
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="card-meta">
                     {item.status && item.status !== "complete" && (
                       <span className={`card-status status-${item.status}`}>{formatStatus(item.status)}</span>
+                    )}
+                    {!item.productUrl && !item.tastingNotesVendor && item.heatVendor === null && (
+                      <span className="card-vendor-missing" title="Missing vendor details">?</span>
                     )}
                     {item.style && <span className="card-tag">{item.style}</span>}
                     {item.date && <span className="card-date">{formatDate(item.date)}</span>}
@@ -1017,6 +1417,29 @@ const App = () => {
                     </div>
                   )}
                   {item.tastingNotesUser && <p className="card-notes">{item.tastingNotesUser}</p>}
+                  {item.ingredients && item.ingredients.length > 0 && (
+                    <details className="card-ingredients">
+                      <summary>Ingredients ({item.ingredients.length})</summary>
+                      <div className="ingredient-pills">
+                        {item.ingredients.map((ing, i) => (
+                          <span key={i} className="ingredient-pill">{ing}</span>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                  {item.nutritionFacts && (
+                    <details className="card-nutrition">
+                      <summary>Nutrition Facts</summary>
+                      <div className="nutrition-grid">
+                        {item.nutritionFacts.servingSize && <span>Serving: {item.nutritionFacts.servingSize}</span>}
+                        {item.nutritionFacts.calories !== undefined && <span>Calories: {item.nutritionFacts.calories}</span>}
+                        {item.nutritionFacts.sodium && <span>Sodium: {item.nutritionFacts.sodium}</span>}
+                        {item.nutritionFacts.totalCarbs && <span>Carbs: {item.nutritionFacts.totalCarbs}</span>}
+                        {item.nutritionFacts.sugars && <span>Sugars: {item.nutritionFacts.sugars}</span>}
+                        {item.nutritionFacts.protein && <span>Protein: {item.nutritionFacts.protein}</span>}
+                      </div>
+                    </details>
+                  )}
                   {item.productUrl && (
                     <a className="card-link" href={item.productUrl} target="_blank" rel="noreferrer">View Product</a>
                   )}

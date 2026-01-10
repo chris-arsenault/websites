@@ -7,7 +7,7 @@ This site targets a single deployment, so defaults are baked in and documented f
 ## Architecture
 
 - Static HTML/JS in `static/`, served as a CDN-backed site.
-- POST /invoke Lambda that forwards prompts to Bedrock.
+- POST /invoke Node.js Lambda that forwards prompts to Bedrock.
 - Per-user rate limiting using a DynamoDB TTL window.
 - Frontend reads `config.js` for the invoke URL.
 
