@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: "20"
       - uses: hashicorp/setup-terraform@v3
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE }}
           role-session-name: GitHubActions-${{ github.run_id }}
