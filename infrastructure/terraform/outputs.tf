@@ -49,3 +49,13 @@ output "cognito_chris_password" {
   value       = random_password.cognito_chris.result
   sensitive   = true
 }
+
+output "cognito_user_pool_id" {
+  description = "Cognito user pool ID"
+  value       = module.cognito.user_pool_id
+}
+
+output "cognito_client_ids" {
+  description = "Map of Cognito client keys to app client IDs"
+  value       = module.cognito.client_ids
+}
