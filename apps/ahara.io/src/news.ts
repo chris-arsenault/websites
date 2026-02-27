@@ -2,6 +2,22 @@ import { NewsArticle } from './types';
 
 export const news: NewsArticle[] = [
   {
+    id: 'drift-2026-02-27',
+    projectId: 'drift',
+    title: 'Drift: Your Codebase Has Been Saying the Same Thing Five Different Ways',
+    date: '2026-02-27',
+    content: `Drift has shipped its first stable release with a new trick: CSS duplication detection. It already found your three identical button bars with different names and your five loading state implementations that all do the same thing slightly differently. Now it also knows that .hero-title and .page-heading have the exact same styles. The four-phase workflow — audit, plan, unify, guard — runs entirely through Claude Code skills, so you can go from "wow that's embarrassing" to "never again" in one session. All analysis runs locally with zero per-token costs, which is good, because the amount of duplication it finds might otherwise bankrupt you.`,
+    tags: ['release', 'developer-tools', 'code-quality'],
+  },
+  {
+    id: 'svap-2026-02-26',
+    projectId: 'svap',
+    title: 'SVAP: Teaching an AI to Think Like a Fraud Investigator',
+    date: '2026-02-26',
+    content: `The Structural Vulnerability Analysis Pipeline has reached v0.2.0 with a freshly rebuilt core. Feed it healthcare enforcement documents — fraud takedowns, OIG reports, DOJ cases — and it extracts scheme mechanics, clusters them into a vulnerability taxonomy, then turns around and scores actual HHS policies for the same weaknesses. The seven-stage pipeline runs on Claude via Bedrock with human approval gates at the critical junctures, because letting an AI autonomously predict fraud vectors without a checkpoint felt unwise. The React dashboard now has eleven specialized views and a Zustand-powered state layer that no longer re-renders the entire universe when you click a tab.`,
+    tags: ['release', 'ai', 'healthcare', 'analysis'],
+  },
+  {
     id: 'scorchbook-2026-01-09',
     projectId: 'scorchbook',
     title: 'Scorchbook Exits Beta, F̶e̶a̶t̶u̶r̶e̶s̶ Fire Complete',

@@ -25,5 +25,6 @@ locals {
   cognito_user_pool_name = "${local.scorchbook_name_prefix}-users"
   cognito_clients = {
     scorchbook = "${local.scorchbook_name_prefix}-app"
+    svap       = "svap-app"
   }
 }
