@@ -49,3 +49,19 @@ output "cognito_chris_password" {
   value       = random_password.cognito_chris.result
   sensitive   = true
 }
+
+output "canonry_config" {
+  description = "Canonry AWS modal settings"
+  value = {
+    region             = data.aws_region.current.id
+    identityPoolId     = aws_cognito_identity_pool.canonry.id
+    cognitoUserPoolId  = module.cognito.user_pool_id
+    cognitoClientId    = module.cognito.client_ids["canonry"]
+    cognitoDomain      = module.cognito.domain_name
+    cognitoRedirectUri = local.canonry_redirect_uri
+    cognitoScope       = local.canonry_scope
+    imageBucket        = local.canonry_image_bucket
+    imagePrefix        = local.canonry_image_prefix
+    useS3Images        = local.canonry_use_s3_images
+  }
+}

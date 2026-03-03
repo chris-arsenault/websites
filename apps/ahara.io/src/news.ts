@@ -2,7 +2,23 @@ import { NewsArticle } from './types';
 
 export const news: NewsArticle[] = [
   {
-    id: 'scorchbook-2026-01-09',
+    id: 'stack-atlas-2026-02-10',
+    projectId: 'stack-atlas',
+    title: 'Stack Atlas: Finally, a Spreadsheet You Actually Want to Fill Out',
+    date: '2026-02-10',
+    content: `Tired of answering "what's our tech stack?" with a shrug and a link to a stale Confluence page? Stack Atlas lets you browse 14 categories of technologies, tools, and patterns, pick the ones you actually use, and export a clean definition in Markdown or JSON. It's like a shopping catalogue for your architecture, except everything is free and nothing ships. Filter by type, search by name, toggle between hierarchy and flat views - all the ways you'd want to slice a canonical inventory of Things Engineers Argue About. Your stack is now documented. No more excuses.`,
+    tags: ['release', 'tool', 'devops'],
+  },
+  {
+    id: 'hot-mic-2026-01-27',
+    projectId: 'hot-mic',
+    title: 'HotMic: Two Mics, Zero Excuses',
+    date: '2026-01-27',
+    content: `HotMic enters development with a simple premise: routing two microphones on Windows shouldn't require a degree in audio engineering or a DAW the size of a small country. The initial build features low-latency WASAPI capture, per-channel DSP with gain staging and metering, and a full plugin chain including dynamics, EQ, and FFT noise removal. For the AI-curious, RNNoise and Silero VAD handle the "please remove my mechanical keyboard from the podcast" problem. VST2/VST3 hosting is in, MIDI Learn is in, and there's a minimal Monitor View for when you just need levels and nothing else. Built with .NET 8, WPF, and SkiaSharp, because sometimes the best audio tool is the one that actually runs on your machine.`,
+    tags: ['release', 'audio', 'windows'],
+  },
+  {
+    id: 'stack-atlas-2026-02-10',
     projectId: 'scorchbook',
     title: 'Scorchbook Exits Beta, F̶e̶a̶t̶u̶r̶e̶s̶ Fire Complete',
     date: '2026-01-09',
@@ -18,9 +34,9 @@ export const news: NewsArticle[] = [
     tags: ['release', 'worldbuilding', 'framework'],
   },
   {
-    id: 'penguin-tales-2026-01-08',
-    projectId: 'penguin-tales',
-    title: 'Penguin Tales: 200+ Penguins Can\'t Be Wrong',
+    id: 'the-ice-remembers-2026-01-08',
+    projectId: 'the-ice-remembers',
+    title: 'The Ice Remembers: 200+ Penguins Can\'t Be Wrong',
     date: '2026-01-08',
     content: `The definitive penguin history experience is here. We've generated over 200 unique penguin portraits, each one a distinguished member of their fictional civilization. The archive now contains 30+ in-universe documents ranging from imperial decrees to philosophical treatises on fish. Is it historically accurate? No. Is it penguinically accurate? We've decided that's not a word, but also yes. Built on The Canonry framework, Penguin Tales serves as both a showcase and a warning about what happens when procedural generation meets an unhealthy obsession with flightless birds.`,
     tags: ['release', 'penguins', 'lore'],
