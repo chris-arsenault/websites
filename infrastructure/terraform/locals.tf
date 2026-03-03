@@ -26,5 +26,14 @@ locals {
   cognito_clients = {
     scorchbook = "${local.scorchbook_name_prefix}-app"
     svap       = "svap-app"
+    canonry    = "${local.scorchbook_name_prefix}-canonry-app"
   }
+
+  canonry_access_group_name  = "canonry-access"
+  canonry_identity_pool_name = "${local.scorchbook_name_prefix}-canonry"
+  canonry_image_bucket       = "${local.scorchbook_name_prefix}-canonry-images-prod"
+  canonry_image_prefix       = ""
+  canonry_redirect_uri       = "https://the-canonry.com"
+  canonry_scope              = "openid email profile"
+  canonry_use_s3_images      = true
 }
