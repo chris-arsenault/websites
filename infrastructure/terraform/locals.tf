@@ -27,7 +27,15 @@ locals {
     scorchbook = "${local.scorchbook_name_prefix}-app"
     svap       = "svap-app"
     canonry    = "${local.scorchbook_name_prefix}-canonry-app"
+    ahara      = "ahara-app"
   }
+
+  ahara_api_domain      = "api.${local.ahara_domain_name}"
+  ahara_frontend_bucket = "ahara-io-frontend"
+  ahara_allowed_origins = [
+    "http://localhost:5173",
+    "https://${local.ahara_hostname}"
+  ]
 
   canonry_access_group_name  = "canonry-access"
   canonry_identity_pool_name = "${local.scorchbook_name_prefix}-canonry"
@@ -36,4 +44,6 @@ locals {
   canonry_redirect_uri       = "https://the-canonry.com"
   canonry_scope              = "openid email profile"
   canonry_use_s3_images      = true
+
+  user_access_table_name = "websites-user-access"
 }

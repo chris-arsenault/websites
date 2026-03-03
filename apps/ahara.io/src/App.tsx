@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { projects } from './projects';
 import { news } from './news';
 import { Project, NewsArticle } from './types';
+import { getSession, signOut } from './auth';
+import { AdminPage } from './admin/AdminPage';
+import { Login } from './admin/Login';
 import './App.css';
 
-type Tab = 'projects' | 'news';
+type Tab = 'projects' | 'news' | 'admin';
 
 function ProjectCard({ project }: { project: Project }) {
   const [expanded, setExpanded] = useState(false);
@@ -170,6 +173,28 @@ function NewsPage() {
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('projects');
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    getSession().then((s) => setAuthenticated(!!s));
+  }, []);
+
+  const handleLogin = () => {
+    setAuthenticated(true);
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    setAuthenticated(false);
+    setActiveTab('projects');
+  };
+
+  const renderMain = () => {
+    if (activeTab === 'admin') {
+      return authenticated ? <AdminPage /> : <Login onLogin={handleLogin} />;
+    }
+    return activeTab === 'projects' ? <ProjectsPage /> : <NewsPage />;
+  };
 
   return (
     <div className="app">
@@ -191,11 +216,22 @@ function App() {
           >
             Projects
           </button>
+          <button
+            className={`nav-tab ${activeTab === 'admin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('admin')}
+          >
+            Admin
+          </button>
+          {authenticated && (
+            <button className="nav-tab sign-out" onClick={handleSignOut}>
+              Sign Out
+            </button>
+          )}
         </nav>
       </header>
 
       <main className="app-main">
-        {activeTab === 'projects' ? <ProjectsPage /> : <NewsPage />}
+        {renderMain()}
       </main>
 
       <footer className="app-footer">

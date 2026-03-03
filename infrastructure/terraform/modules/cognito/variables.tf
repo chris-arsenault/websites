@@ -17,3 +17,9 @@ variable "clients" {
   description = "Map of client keys to client names"
   type        = map(string)
 }
+
+variable "pre_auth_lambda_arn" {
+  description = "ARN of the Pre-Authentication Lambda trigger"
+  type        = string
+  default     = ""
+}
