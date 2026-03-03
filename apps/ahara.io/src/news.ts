@@ -34,9 +34,9 @@ export const news: NewsArticle[] = [
     tags: ['release', 'worldbuilding', 'framework'],
   },
   {
-    id: 'penguin-tales-2026-01-08',
-    projectId: 'penguin-tales',
-    title: 'Penguin Tales: 200+ Penguins Can\'t Be Wrong',
+    id: 'the-ice-remembers-2026-01-08',
+    projectId: 'the-ice-remembers',
+    title: 'The Ice Remembers: 200+ Penguins Can\'t Be Wrong',
     date: '2026-01-08',
     content: `The definitive penguin history experience is here. We've generated over 200 unique penguin portraits, each one a distinguished member of their fictional civilization. The archive now contains 30+ in-universe documents ranging from imperial decrees to philosophical treatises on fish. Is it historically accurate? No. Is it penguinically accurate? We've decided that's not a word, but also yes. Built on The Canonry framework, Penguin Tales serves as both a showcase and a warning about what happens when procedural generation meets an unhealthy obsession with flightless birds.`,
     tags: ['release', 'penguins', 'lore'],
