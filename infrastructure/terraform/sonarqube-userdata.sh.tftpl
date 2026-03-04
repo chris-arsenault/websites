@@ -200,11 +200,6 @@ else
   echo "Admin password already changed, skipping"
 fi
 
-# --- Create project (idempotent) ---
-curl -sf -u "admin:$ADMIN_PASSWORD" -X POST \
-  "http://localhost:9000/api/projects/create?name=websites&project=websites" || true
-echo "Project created"
-
 # --- Generate CI token (skip if already in SSM) ---
 EXISTING_TOKEN=$(ssm_get ci-token 2>/dev/null || true)
 if [ -n "$EXISTING_TOKEN" ]; then
@@ -212,7 +207,7 @@ if [ -n "$EXISTING_TOKEN" ]; then
   CI_TOKEN="$EXISTING_TOKEN"
 else
   TOKEN_RESPONSE=$(curl -sf -u "admin:$ADMIN_PASSWORD" -X POST \
-    "http://localhost:9000/api/user_tokens/generate?name=ci&type=PROJECT_ANALYSIS_TOKEN&projectKey=websites")
+    "http://localhost:9000/api/user_tokens/generate?name=ci&type=GLOBAL_ANALYSIS_TOKEN")
   CI_TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
 fi
 
