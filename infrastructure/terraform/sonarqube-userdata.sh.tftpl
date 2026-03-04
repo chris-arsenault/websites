@@ -177,6 +177,10 @@ for i in $(seq 1 60); do
     echo "SonarQube is up after $i attempts"
     break
   fi
+  if [ "$STATUS" = "DB_MIGRATION_NEEDED" ]; then
+    echo "Triggering database migration..."
+    curl -sf -u admin:admin -X POST "http://localhost:9000/api/system/migrate_db" || true
+  fi
   echo "Attempt $i: status=$STATUS"
   sleep 10
 done
