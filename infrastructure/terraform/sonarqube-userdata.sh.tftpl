@@ -7,7 +7,9 @@ DOMAIN="${domain}"
 COGNITO_POOL_ID="${cognito_pool_id}"
 SSM_PREFIX="${ssm_prefix}"
 OIDC_PLUGIN_URL="${oidc_plugin_url}"
+DATA_DEVICE="${data_device}"
 INSTALL_DIR="/opt/sonarqube"
+DATA_DIR="/mnt/sonarqube-data"
 
 # --- Helper ---
 ssm_get() {
@@ -29,9 +31,46 @@ curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-co
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
+# --- Mount data volume ---
+echo "Waiting for data volume to attach..."
+for i in $$(seq 1 30); do
+  if [ -b "$$DATA_DEVICE" ]; then
+    echo "Data volume available after $$i attempts"
+    break
+  fi
+  sleep 5
+done
+
+# Format only if no filesystem exists (preserves data on instance replacement)
+if ! blkid "$$DATA_DEVICE" >/dev/null 2>&1; then
+  echo "Formatting data volume..."
+  mkfs.ext4 "$$DATA_DEVICE"
+fi
+
+mkdir -p "$$DATA_DIR"
+mount "$$DATA_DEVICE" "$$DATA_DIR"
+
+# Persist mount across reboots
+echo "$$DATA_DEVICE $$DATA_DIR ext4 defaults,nofail 0 2" >> /etc/fstab
+
+# Create subdirectories for Docker bind mounts
+mkdir -p "$$DATA_DIR/postgresql" "$$DATA_DIR/sonarqube-data" "$$DATA_DIR/sonarqube-extensions" "$$DATA_DIR/caddy"
+chown -R 1000:1000 "$$DATA_DIR/sonarqube-data" "$$DATA_DIR/sonarqube-extensions"
+
 # --- Sysctl for Elasticsearch ---
 sysctl -w vm.max_map_count=524288
 echo "vm.max_map_count=524288" >> /etc/sysctl.conf
+
+# --- Wait for instance profile credentials ---
+echo "Waiting for instance profile credentials..."
+for i in $$(seq 1 30); do
+  if aws sts get-caller-identity --region "$$AWS_REGION" >/dev/null 2>&1; then
+    echo "Credentials available after $$i attempts"
+    break
+  fi
+  echo "Attempt $$i: no credentials yet"
+  sleep 5
+done
 
 # --- Read secrets from SSM ---
 DB_PASSWORD=$$(ssm_get db-password)
@@ -76,7 +115,7 @@ services:
       - "80:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
+      - $$DATA_DIR/caddy:/data
     depends_on:
       - sonarqube
     restart: unless-stopped
@@ -88,8 +127,8 @@ services:
       SONAR_JDBC_USERNAME: sonar
       SONAR_JDBC_PASSWORD: $$DB_PASSWORD
     volumes:
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
+      - $$DATA_DIR/sonarqube-data:/opt/sonarqube/data
+      - $$DATA_DIR/sonarqube-extensions:/opt/sonarqube/extensions
       - ./sonar.properties:/opt/sonarqube/conf/sonar.properties:ro
     depends_on:
       - db
@@ -102,14 +141,8 @@ services:
       POSTGRES_PASSWORD: $$DB_PASSWORD
       POSTGRES_DB: sonar
     volumes:
-      - postgresql_data:/var/lib/postgresql/data
+      - $$DATA_DIR/postgresql:/var/lib/postgresql/data
     restart: unless-stopped
-
-volumes:
-  caddy_data:
-  sonarqube_data:
-  sonarqube_extensions:
-  postgresql_data:
 EOF
 
 # --- Start services ---
