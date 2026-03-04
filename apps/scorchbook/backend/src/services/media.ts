@@ -28,7 +28,7 @@ export const parseBase64Data = (data?: string, fallbackMimeType?: string): Media
   if (!data) {
     return null;
   }
-  const dataUrlMatch = data.match(/^data:(.+);base64,(.+)$/);
+  const dataUrlMatch = /^data:(.+);base64,(.+)$/.exec(data);
   const contentType = normalizeContentType(dataUrlMatch?.[1] ?? fallbackMimeType ?? "application/octet-stream") ??
     "application/octet-stream";
   const base64 = dataUrlMatch?.[2] ?? data;
@@ -63,9 +63,9 @@ const streamToBuffer = async (body: Readable | Uint8Array | Blob): Promise<Buffe
     return Buffer.from(arrayBuffer);
   }
   if (typeof (body as Readable)[Symbol.asyncIterator] === "function") {
-    const chunks: Buffer[] = [];
+    const chunks: Uint8Array[] = [];
     for await (const chunk of body as Readable) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      chunks.push(chunk instanceof Uint8Array ? chunk : Buffer.from(String(chunk)));
     }
     return Buffer.concat(chunks);
   }

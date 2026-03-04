@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { SubmitEvent } from "react";
 import type { AuthState } from "../hooks/useAuth";
 import type { Filters, ProductType } from "../types";
 
@@ -16,7 +16,7 @@ const brandTaglines: Record<string, string> = {
 
 function AuthMenu({ auth, onSignIn, onSignOut, onError }: Readonly<{
   auth: AuthState;
-  onSignIn: (event: FormEvent<HTMLFormElement>, onError: (msg: string) => void) => void;
+  onSignIn: (event: SubmitEvent<HTMLFormElement>, onError: (msg: string) => void) => void;
   onSignOut: () => void;
   onError: (msg: string) => void;
 }>) {
@@ -52,7 +52,7 @@ type HeaderProps = {
   setMenuOpen: (open: boolean) => void;
   onAdd: () => void;
   onCloseForm: () => void;
-  onSignIn: (event: FormEvent<HTMLFormElement>, onError: (msg: string) => void) => void;
+  onSignIn: (event: SubmitEvent<HTMLFormElement>, onError: (msg: string) => void) => void;
   onSignOut: () => void;
   onError: (msg: string) => void;
 };

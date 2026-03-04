@@ -6,7 +6,7 @@ const bedrockModelId = process.env.BEDROCK_MODEL_ID ?? "anthropic.claude-3-haiku
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const decodeBody = async (body: Uint8Array | string): Promise<string> => {
+const decodeBody = (body: Uint8Array | string): string => {
   if (typeof body === "string") {
     return body;
   }
@@ -53,7 +53,7 @@ export const invokeClaude = async (payload: Record<string, unknown>): Promise<st
   });
   try {
     const response = await bedrockClient.send(command);
-    const body = await decodeBody(response.body);
+    const body = decodeBody(response.body);
     return extractClaudeText(body);
   } catch (error) {
     logWarn("bedrock.invoke.failed", { error: (error as Error).message });

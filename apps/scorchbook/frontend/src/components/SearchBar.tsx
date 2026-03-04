@@ -60,18 +60,18 @@ export function SearchBar({ filters, setFilters, activeFilterCount, searchPlaceh
             <ScoreSlider value={filters.minScore} onChange={onMinScoreChange} label="Min Score" />
           </div>
           <div className="filter-row">
-            <div className="filter-field">
-              <label>Style</label>
+            <label className="filter-field">
+              <span>Style</span>
               <input placeholder="e.g. Habanero" value={filters.style} onChange={(e) => setFilters((prev) => ({ ...prev, style: e.target.value }))} />
-            </div>
-            <div className="filter-field">
-              <label>Ingredient</label>
+            </label>
+            <label className="filter-field">
+              <span>Ingredient</span>
               <input placeholder="e.g. Garlic" value={filters.ingredient} onChange={(e) => setFilters((prev) => ({ ...prev, ingredient: e.target.value }))} />
-            </div>
-            <div className="filter-field">
-              <label>Date</label>
+            </label>
+            <label className="filter-field">
+              <span>Date</span>
               <input type="date" value={filters.date} onChange={(e) => setFilters((prev) => ({ ...prev, date: e.target.value }))} />
-            </div>
+            </label>
             {activeFilterCount > 0 && (
               <button className="clear-filters" onClick={onReset}>Clear all</button>
             )}

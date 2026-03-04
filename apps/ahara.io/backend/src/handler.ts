@@ -77,7 +77,7 @@ const getAuthHeader = (headers: APIGatewayProxyEventV2["headers"]) =>
   headers.authorization ?? headers.Authorization;
 
 const routeUserRequest = async (method: string, path: string, event: APIGatewayProxyEventV2, cors: Record<string, string>) => {
-  const userMatch = path.match(/^\/users\/([^/]+)$/);
+  const userMatch = /^\/users\/([^/]+)$/.exec(path);
   if (!userMatch) return json(404, { message: "Not found" }, cors);
   const username = decodeURIComponent(userMatch[1]);
   if (method === "PUT") return handlePut(username, event, cors);
