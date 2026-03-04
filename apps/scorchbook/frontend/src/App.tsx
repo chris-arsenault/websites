@@ -1,4 +1,5 @@
 import "./App.css";
+import { useMemo } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useTastings } from "./hooks/useTastings";
 import { useFilters } from "./hooks/useFilters";
@@ -76,6 +77,8 @@ const App = () => {
 
   const searchPlaceholder = searchPlaceholders[filters.productType] ?? "Search...";
   const itemLabel = itemLabels[filters.productType] ?? "item";
+  const manualFields = useMemo(() => ({ value: tastings.showManualFields, set: tastings.setShowManualFields }), [tastings.showManualFields, tastings.setShowManualFields]);
+  const mediaExpanded = useMemo(() => ({ value: tastings.mediaExpanded, set: tastings.setMediaExpanded }), [tastings.mediaExpanded, tastings.setMediaExpanded]);
 
   return (
     <div className={`app ${themeClass[filters.productType] ?? "theme-sauce"}`}>
@@ -108,10 +111,8 @@ const App = () => {
           formMode={tastings.formMode}
           form={tastings.form}
           setForm={tastings.setForm}
-          showManualFields={tastings.showManualFields}
-          setShowManualFields={tastings.setShowManualFields}
-          mediaExpanded={tastings.mediaExpanded}
-          setMediaExpanded={tastings.setMediaExpanded}
+          manualFields={manualFields}
+          mediaExpanded={mediaExpanded}
           submitStatus={tastings.submitStatus}
           viewingRecord={tastings.viewingRecord}
           productType={filters.productType}
