@@ -21,7 +21,7 @@ export const handler: PreAuthenticationTriggerHandler = async (
   event: PreAuthenticationTriggerEvent
 ) => {
   const clientId = event.callerContext.clientId;
-  const username = event.request.userAttributes?.email ?? event.userName;
+  const username = event.userName;
 
   const map = await getClientMap();
   const appKey = map[clientId];
