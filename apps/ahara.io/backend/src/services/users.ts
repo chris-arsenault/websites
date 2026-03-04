@@ -44,11 +44,13 @@ export const deleteUser = async (username: string): Promise<void> => {
   );
 };
 
+const isEmail = (value: string) => value.includes("@");
+
 export const ensureCognitoUser = async (username: string, password?: string): Promise<void> => {
   const existing = await cognito.send(
     new ListUsersCommand({
       UserPoolId: userPoolId,
-      Filter: `email = "${username}"`,
+      Filter: `username = "${username}"`,
       Limit: 1
     })
   );
@@ -62,15 +64,16 @@ export const ensureCognitoUser = async (username: string, password?: string): Pr
 
   if (!password) throw new Error("Password is required for new users");
 
+  const attributes = isEmail(username)
+    ? [{ Name: "email", Value: username }, { Name: "email_verified", Value: "true" }]
+    : [];
+
   await cognito.send(
     new AdminCreateUserCommand({
       UserPoolId: userPoolId,
       Username: username,
       MessageAction: "SUPPRESS",
-      UserAttributes: [
-        { Name: "email", Value: username },
-        { Name: "email_verified", Value: "true" }
-      ]
+      UserAttributes: attributes
     })
   );
 

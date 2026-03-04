@@ -19,7 +19,7 @@ resource "aws_cognito_user_pool" "pool" {
   name = var.user_pool_name
 
   auto_verified_attributes = ["email"]
-  username_attributes      = ["email"]
+  alias_attributes         = ["email"]
 
   password_policy {
     minimum_length    = 8
