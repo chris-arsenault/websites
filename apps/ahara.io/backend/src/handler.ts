@@ -73,30 +73,33 @@ const handleDelete = async (username: string, cors: Record<string, string>) => {
   return empty(204, cors);
 };
 
+const getAuthHeader = (headers: APIGatewayProxyEventV2["headers"]) =>
+  headers.authorization ?? headers.Authorization;
+
+const routeUserRequest = async (method: string, path: string, event: APIGatewayProxyEventV2, cors: Record<string, string>) => {
+  const userMatch = path.match(/^\/users\/([^/]+)$/);
+  if (!userMatch) return json(404, { message: "Not found" }, cors);
+  const username = decodeURIComponent(userMatch[1]);
+  if (method === "PUT") return handlePut(username, event, cors);
+  if (method === "DELETE") return handleDelete(username, cors);
+  return json(404, { message: "Not found" }, cors);
+};
+
+const routeRequest = async (method: string, path: string, event: APIGatewayProxyEventV2, cors: Record<string, string>) => {
+  await verifyAuth(getAuthHeader(event.headers));
+  if (method === "GET") {
+    const result = await handleGet(path, cors);
+    if (result) return result;
+  }
+  return routeUserRequest(method, path, event, cors);
+};
+
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
   const method = event.requestContext.http.method.toUpperCase();
-  const path = event.rawPath;
   const cors = getCorsHeaders(event.headers.origin ?? event.headers.Origin);
-
   if (method === "OPTIONS") return empty(204, cors);
-
   try {
-    await verifyAuth(event.headers.authorization ?? event.headers.Authorization);
-
-    if (method === "GET") {
-      const result = await handleGet(path, cors);
-      if (result) return result;
-    }
-
-    const userMatch = path.match(/^\/users\/([^/]+)$/);
-    if (!userMatch) return json(404, { message: "Not found" }, cors);
-
-    const username = decodeURIComponent(userMatch[1]);
-
-    if (method === "PUT") return handlePut(username, event, cors);
-    if (method === "DELETE") return handleDelete(username, cors);
-
-    return json(404, { message: "Not found" }, cors);
+    return await routeRequest(method, event.rawPath, event, cors);
   } catch (error) {
     const message = (error as Error).message;
     return json(isAuthError(message) ? 401 : 400, { message }, cors);

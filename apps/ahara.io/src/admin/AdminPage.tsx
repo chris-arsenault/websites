@@ -23,21 +23,25 @@ export function AdminPage() {
     load();
   }, [load]);
 
-  const handleSave = (user: UserRecord) => {
+  const handleSave = useCallback((user: UserRecord) => {
     saveUser(user)
       .then(() => {
         setEditing(null);
         load();
       })
       .catch((err: unknown) => setError((err as Error).message));
-  };
+  }, [load]);
 
-  const handleDelete = (username: string) => {
+  const handleDelete = useCallback((username: string) => {
     if (!confirm(`Delete user ${username}?`)) return;
     removeUser(username)
       .then(() => load())
       .catch((err: unknown) => setError((err as Error).message));
-  };
+  }, [load]);
+
+  const handleCancel = useCallback(() => setEditing(null), []);
+  const handleAdd = useCallback(() => setEditing("new" as const), []);
+  const handleEdit = useCallback((u: UserRecord) => setEditing(u), []);
 
   if (loading) return <p>Loading...</p>;
 
@@ -48,14 +52,14 @@ export function AdminPage() {
         <UserEditor
           user={editing === "new" ? undefined : editing}
           onSave={handleSave}
-          onCancel={() => setEditing(null)}
+          onCancel={handleCancel}
         />
       ) : (
         <UserList
           users={users}
-          onEdit={(u) => setEditing(u)}
+          onEdit={handleEdit}
           onDelete={handleDelete}
-          onAdd={() => setEditing("new")}
+          onAdd={handleAdd}
         />
       )}
     </div>

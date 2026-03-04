@@ -7,10 +7,10 @@ type DeleteModalProps = {
   onClose: () => void;
 };
 
-export function DeleteModal({ target, deleting, onConfirm, onClose }: DeleteModalProps) {
+export function DeleteModal({ target, deleting, onConfirm, onClose }: Readonly<DeleteModalProps>) {
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal" role="dialog" aria-modal="true">
         <div className="modal-header">
           <h3>Delete tasting?</h3>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close">

@@ -2,6 +2,47 @@ import type { FormEvent } from "react";
 import type { AuthState } from "../hooks/useAuth";
 import type { Filters, ProductType } from "../types";
 
+const brandNames: Record<string, string> = {
+  drink: "Quenchbook",
+  sauce: "Scorchbook",
+  all: "Scorchbook"
+};
+
+const brandTaglines: Record<string, string> = {
+  drink: "Drink Log",
+  sauce: "Hot Sauce Log",
+  all: "Taste Log"
+};
+
+function AuthMenu({ auth, onSignIn, onSignOut, onError }: Readonly<{
+  auth: AuthState;
+  onSignIn: (event: FormEvent<HTMLFormElement>, onError: (msg: string) => void) => void;
+  onSignOut: () => void;
+  onError: (msg: string) => void;
+}>) {
+  if (auth.status === "signedIn") {
+    return (
+      <>
+        <div className="menu-user">
+          <span className="menu-user-label">Signed in as</span>
+          <span className="menu-user-name">{auth.username || "Taster"}</span>
+        </div>
+        <button className="menu-item" onClick={onSignOut}>Sign out</button>
+      </>
+    );
+  }
+  if (auth.status === "signedOut") {
+    return (
+      <form className="menu-auth-form" onSubmit={(e) => onSignIn(e, onError)}>
+        <input name="username" placeholder="Username" required autoComplete="username" />
+        <input name="password" type="password" placeholder="Password" required autoComplete="current-password" />
+        <button type="submit">Sign in</button>
+      </form>
+    );
+  }
+  return <div className="menu-loading">Loading...</div>;
+}
+
 type HeaderProps = {
   auth: AuthState;
   filters: Filters;
@@ -16,17 +57,14 @@ type HeaderProps = {
   onError: (msg: string) => void;
 };
 
-export function Header({ auth, filters, setFilters, formOpen, menuOpen, setMenuOpen, onAdd, onCloseForm, onSignIn, onSignOut, onError }: HeaderProps) {
-  const brandName = filters.productType === "drink" ? "Quenchbook" : "Scorchbook";
-  const brandTagline = filters.productType === "drink" ? "Drink Log" : filters.productType === "all" ? "Taste Log" : "Hot Sauce Log";
-
+export function Header({ auth, filters, setFilters, formOpen, menuOpen, setMenuOpen, onAdd, onCloseForm, onSignIn, onSignOut, onError }: Readonly<HeaderProps>) {
   const setProductType = (pt: ProductType | "all") => setFilters((f) => ({ ...f, productType: pt }));
 
   return (
     <header className="header">
       <div className="header-brand">
-        <h1>{brandName}</h1>
-        <span className="header-tagline">{brandTagline}</span>
+        <h1>{brandNames[filters.productType] ?? "Scorchbook"}</h1>
+        <span className="header-tagline">{brandTaglines[filters.productType] ?? "Taste Log"}</span>
       </div>
 
       <div className="product-toggle">
@@ -52,26 +90,9 @@ export function Header({ auth, filters, setFilters, formOpen, menuOpen, setMenuO
           <button className="menu-btn" onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }} aria-label="Menu">
             <span className="menu-icon" />
           </button>
-
           {menuOpen && (
             <div className="menu-dropdown">
-              {auth.status === "signedIn" ? (
-                <>
-                  <div className="menu-user">
-                    <span className="menu-user-label">Signed in as</span>
-                    <span className="menu-user-name">{auth.username || "Taster"}</span>
-                  </div>
-                  <button className="menu-item" onClick={onSignOut}>Sign out</button>
-                </>
-              ) : auth.status === "signedOut" ? (
-                <form className="menu-auth-form" onSubmit={(e) => onSignIn(e, onError)}>
-                  <input name="username" placeholder="Username" required autoComplete="username" />
-                  <input name="password" type="password" placeholder="Password" required autoComplete="current-password" />
-                  <button type="submit">Sign in</button>
-                </form>
-              ) : (
-                <div className="menu-loading">Loading...</div>
-              )}
+              <AuthMenu auth={auth} onSignIn={onSignIn} onSignOut={onSignOut} onError={onError} />
             </div>
           )}
         </div>

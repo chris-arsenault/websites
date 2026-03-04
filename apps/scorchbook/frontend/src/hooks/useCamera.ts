@@ -11,16 +11,32 @@ const waitForVideoReady = (video: HTMLVideoElement) =>
     video.addEventListener("canplay", handleReady, { once: true });
   });
 
-const getVideoDimensions = (video: HTMLVideoElement, stream: MediaStream | null) => {
-  let width = video.videoWidth;
-  let height = video.videoHeight;
-  if ((!width || !height) && stream) {
-    const settings = stream.getVideoTracks()[0]?.getSettings?.();
-    width = settings?.width ?? width;
-    height = settings?.height ?? height;
-  }
-  return { width: width || 640, height: height || 480 };
+const getStreamDimensions = (stream: MediaStream | null) => {
+  const settings = stream?.getVideoTracks()[0]?.getSettings?.();
+  return { width: settings?.width, height: settings?.height };
 };
+
+const getVideoDimensions = (video: HTMLVideoElement, stream: MediaStream | null) => {
+  const streamDims = getStreamDimensions(stream);
+  const width = video.videoWidth || streamDims.width || 640;
+  const height = video.videoHeight || streamDims.height || 480;
+  return { width, height };
+};
+
+const captureFrame = (video: HTMLVideoElement, stream: MediaStream | null): string | null => {
+  const canvas = document.createElement("canvas");
+  const { width, height } = getVideoDimensions(video, stream);
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+  const payload = dataUrl.split(",")[1] ?? "";
+  return payload.length >= 100 ? dataUrl : null;
+};
+
+export type CameraControls = ReturnType<typeof useCamera>[1];
 
 export function useCamera(onError: (msg: string) => void) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -74,34 +90,18 @@ export function useCamera(onError: (msg: string) => void) {
   };
 
   const capture = () => {
-    if (!videoRef.current) {
-      onError("Camera preview is not ready.");
-      return;
-    }
+    if (!videoRef.current) { onError("Camera preview is not ready."); return; }
     const video = videoRef.current;
     waitForVideoReady(video)
       .then(() => {
-        const canvas = document.createElement("canvas");
-        const { width, height } = getVideoDimensions(video, stream);
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d");
-        if (!context) return;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        const base64Payload = dataUrl.split(",")[1] ?? "";
-        if (base64Payload.length < 100) {
-          onError("Unable to capture photo. Try again.");
-          return;
-        }
+        const dataUrl = captureFrame(video, stream);
+        if (!dataUrl) { onError("Unable to capture photo. Try again."); return; }
         setPreview(dataUrl);
         setBase64(dataUrl);
         setMimeType("image/jpeg");
         stop();
       })
-      .catch(() => {
-        onError("Unable to capture photo. Try again.");
-      });
+      .catch(() => onError("Unable to capture photo. Try again."));
   };
 
   const clear = () => {

@@ -45,8 +45,10 @@ export function useAuth() {
   const handleSignIn = (event: FormEvent<HTMLFormElement>, onError: (msg: string) => void) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const username = String(formData.get("username") ?? "");
-    const password = String(formData.get("password") ?? "");
+    const rawUser = formData.get("username");
+    const rawPass = formData.get("password");
+    const username = typeof rawUser === "string" ? rawUser : "";
+    const password = typeof rawPass === "string" ? rawPass : "";
     signIn(username, password)
       .then((session) => {
         setAuth({ status: "signedIn", token: session.getIdToken().getJwtToken(), username });
@@ -57,11 +59,10 @@ export function useAuth() {
       });
   };
 
-  const handleSignOut = (cleanup?: () => void) => {
+  const handleSignOut = () => {
     signOut();
     setAuth({ status: "signedOut", token: "", username: "" });
     setMenuOpen(false);
-    cleanup?.();
   };
 
   return { auth, menuOpen, setMenuOpen, handleSignIn, handleSignOut };

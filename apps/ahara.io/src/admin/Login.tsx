@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { signIn } from "../auth";
 
-export function Login({ onLogin }: { onLogin: () => void }) {
+export function Login({ onLogin }: Readonly<{ onLogin: () => void }>) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

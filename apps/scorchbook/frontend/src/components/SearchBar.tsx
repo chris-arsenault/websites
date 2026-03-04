@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { HeatSlider, ScoreSlider } from "./display";
 import type { Filters } from "../types";
 
@@ -10,8 +10,15 @@ type SearchBarProps = {
   onReset: () => void;
 };
 
-export function SearchBar({ filters, setFilters, activeFilterCount, searchPlaceholder, onReset }: SearchBarProps) {
+export function SearchBar({ filters, setFilters, activeFilterCount, searchPlaceholder, onReset }: Readonly<SearchBarProps>) {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  const updateFilter = useCallback(
+    <K extends keyof Filters>(key: K, value: Filters[K]) => setFilters((prev) => ({ ...prev, [key]: value })),
+    [setFilters]
+  );
+  const onMinHeatChange = useCallback((val: string) => updateFilter("minHeat", val), [updateFilter]);
+  const onMinScoreChange = useCallback((val: string) => updateFilter("minScore", val), [updateFilter]);
 
   return (
     <div className="search-bar">
@@ -49,8 +56,8 @@ export function SearchBar({ filters, setFilters, activeFilterCount, searchPlaceh
       {filtersExpanded && (
         <div className="filter-panel">
           <div className="filter-row">
-            <HeatSlider value={filters.minHeat} onChange={(val) => setFilters((prev) => ({ ...prev, minHeat: val }))} label="Min Heat" />
-            <ScoreSlider value={filters.minScore} onChange={(val) => setFilters((prev) => ({ ...prev, minScore: val }))} label="Min Score" />
+            <HeatSlider value={filters.minHeat} onChange={onMinHeatChange} label="Min Heat" />
+            <ScoreSlider value={filters.minScore} onChange={onMinScoreChange} label="Min Score" />
           </div>
           <div className="filter-row">
             <div className="filter-field">
