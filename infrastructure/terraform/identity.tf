@@ -30,7 +30,4 @@ resource "aws_dynamodb_table_item" "seed_user" {
     } }
   })
 
-  lifecycle {
-    ignore_changes = [item]
-  }
 }
