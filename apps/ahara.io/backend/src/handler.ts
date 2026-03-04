@@ -103,7 +103,7 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
   try {
     return await routeRequest(method, event.rawPath, event, cors);
   } catch (error) {
-    const message = (error as Error).message;
+    const message = error instanceof Error ? error.message : String(error);
     return json(isAuthError(message) ? 401 : 400, { message }, cors);
   }
 };
