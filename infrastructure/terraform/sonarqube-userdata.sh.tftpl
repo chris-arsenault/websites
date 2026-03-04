@@ -73,8 +73,8 @@ DATA_UUID=$(blkid -s UUID -o value "$ACTUAL_DEVICE")
 echo "UUID=$DATA_UUID $DATA_DIR ext4 defaults,nofail 0 2" >> /etc/fstab
 
 # Create subdirectories for Docker bind mounts
-mkdir -p "$DATA_DIR/postgresql" "$DATA_DIR/sonarqube-data" "$DATA_DIR/sonarqube-extensions" "$DATA_DIR/caddy"
-chown -R 1000:1000 "$DATA_DIR/sonarqube-data" "$DATA_DIR/sonarqube-extensions"
+mkdir -p "$DATA_DIR/postgresql" "$DATA_DIR/sonarqube-data" "$DATA_DIR/sonarqube-logs" "$DATA_DIR/caddy"
+chown -R 1000:1000 "$DATA_DIR/sonarqube-data" "$DATA_DIR/sonarqube-logs"
 
 # --- Sysctl for Elasticsearch ---
 sysctl -w vm.max_map_count=524288
@@ -101,10 +101,9 @@ COGNITO_CLIENT_SECRET=$(ssm_get cognito-client-secret)
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Download OIDC plugin (mounted into container, no build needed)
-mkdir -p "$DATA_DIR/sonarqube-plugins"
-curl -fsSL "$OIDC_PLUGIN_URL" -o "$DATA_DIR/sonarqube-plugins/sonar-auth-oidc-plugin.jar"
-chown 1000:1000 "$DATA_DIR/sonarqube-plugins/sonar-auth-oidc-plugin.jar"
+# Download OIDC plugin (mounted as single file, preserves built-in plugins)
+curl -fsSL "$OIDC_PLUGIN_URL" -o "$INSTALL_DIR/sonar-auth-oidc-plugin.jar"
+chown 1000:1000 "$INSTALL_DIR/sonar-auth-oidc-plugin.jar"
 
 cat > sonar.properties <<EOF
 sonar.core.serverBaseURL=https://$DOMAIN
@@ -149,8 +148,8 @@ services:
       SONAR_JDBC_PASSWORD: $DB_PASSWORD
     volumes:
       - $DATA_DIR/sonarqube-data:/opt/sonarqube/data
-      - $DATA_DIR/sonarqube-extensions:/opt/sonarqube/extensions
-      - $DATA_DIR/sonarqube-plugins:/opt/sonarqube/extensions/plugins
+      - $DATA_DIR/sonarqube-logs:/opt/sonarqube/logs
+      - ./sonar-auth-oidc-plugin.jar:/opt/sonarqube/extensions/plugins/sonar-auth-oidc-plugin.jar:ro
       - ./sonar.properties:/opt/sonarqube/conf/sonar.properties:ro
     depends_on:
       - db
