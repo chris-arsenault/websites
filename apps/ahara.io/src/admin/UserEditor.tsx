@@ -97,7 +97,10 @@ export function UserEditor({ user, onSave, onCancel }: Readonly<Props>) {
         email={email} setEmail={setEmail} password={password} setPassword={setPassword}
         displayName={displayName} setDisplayName={setDisplayName}
       />
-      <AppAccessFieldset apps={apps} onToggle={handleToggle} onRoleChange={handleRoleChange} />
+      {username === "chris"
+        ? <p><strong>Global access override</strong> — chris bypasses all app access checks.</p>
+        : <AppAccessFieldset apps={apps} onToggle={handleToggle} onRoleChange={handleRoleChange} />
+      }
       <div className="editor-actions">
         <button type="submit">Save</button>
         <button type="button" onClick={onCancel}>Cancel</button>

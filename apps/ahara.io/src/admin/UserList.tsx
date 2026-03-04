@@ -29,9 +29,11 @@ export function UserList({ users, onEdit, onDelete, onAdd }: Readonly<Props>) {
               <td>{u.username}</td>
               <td>{u.displayName ?? "\u2014"}</td>
               <td>
-                {Object.entries(u.apps ?? {})
-                  .map(([k, v]) => `${k}:${v}`)
-                  .join(", ") || "none"}
+                {u.username === "chris"
+                  ? "all (global override)"
+                  : Object.entries(u.apps ?? {})
+                      .map(([k, v]) => `${k}:${v}`)
+                      .join(", ") || "none"}
               </td>
               <td className="actions-cell">
                 <button onClick={() => onEdit(u)}>Edit</button>
