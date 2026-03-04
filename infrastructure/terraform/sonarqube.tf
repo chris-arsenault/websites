@@ -178,7 +178,7 @@ resource "aws_instance" "sonarqube" {
   tags = { Name = "websites-sonarqube" }
 
   lifecycle {
-    ignore_changes = [ami, user_data]
+    ignore_changes = [ami]
   }
 }
 
