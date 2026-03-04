@@ -36,33 +36,22 @@ function AppAccessFieldset({ apps, onToggle, onRoleChange }: Readonly<{
   );
 }
 
-type Props = {
-  user?: UserRecord;
-  onSave: (user: UserRecord) => void;
-  onCancel: () => void;
-};
-
-export function UserEditor({ user, onSave, onCancel }: Readonly<Props>) {
-  const isNew = !user;
-  const [username, setUsername] = useState(user?.username ?? "");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [apps, setApps] = useState<Record<string, string>>(user?.apps ?? {});
-
-  const handleToggle = useCallback((k: string) => setApps((p) => toggleAppKey(p, k)), []);
-  const handleRoleChange = useCallback((k: string, r: string) => setApps((p) => ({ ...p, [k]: r })), []);
-
-  const handleSubmit = (e: React.SubmitEvent) => {
-    e.preventDefault();
-    onSave({ username, displayName, apps, ...(isNew && password ? { password } : {}) });
-  };
-
+function IdentityFields({ isNew, username, setUsername, email, setEmail, password, setPassword, displayName, setDisplayName }: Readonly<{
+  isNew: boolean;
+  username: string; setUsername: (v: string) => void;
+  email: string; setEmail: (v: string) => void;
+  password: string; setPassword: (v: string) => void;
+  displayName: string; setDisplayName: (v: string) => void;
+}>) {
   return (
-    <form className="user-editor" onSubmit={handleSubmit}>
-      <h3>{user ? "Edit User" : "Add User"}</h3>
+    <>
       <label>
         Username
-        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} disabled={!!user} required />
+        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} disabled={!isNew} required />
+      </label>
+      <label>
+        Email (optional)
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </label>
       {isNew && (
         <label>
@@ -74,6 +63,40 @@ export function UserEditor({ user, onSave, onCancel }: Readonly<Props>) {
         Display Name
         <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
       </label>
+    </>
+  );
+}
+
+type Props = {
+  user?: UserRecord;
+  onSave: (user: UserRecord) => void;
+  onCancel: () => void;
+};
+
+export function UserEditor({ user, onSave, onCancel }: Readonly<Props>) {
+  const isNew = !user;
+  const [username, setUsername] = useState(user?.username ?? "");
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
+  const [apps, setApps] = useState<Record<string, string>>(user?.apps ?? {});
+
+  const handleToggle = useCallback((k: string) => setApps((p) => toggleAppKey(p, k)), []);
+  const handleRoleChange = useCallback((k: string, r: string) => setApps((p) => ({ ...p, [k]: r })), []);
+
+  const handleSubmit = (e: React.SubmitEvent) => {
+    e.preventDefault();
+    onSave({ username, email: email || undefined, displayName, apps, ...(isNew && password ? { password } : {}) });
+  };
+
+  return (
+    <form className="user-editor" onSubmit={handleSubmit}>
+      <h3>{user ? "Edit User" : "Add User"}</h3>
+      <IdentityFields
+        isNew={isNew} username={username} setUsername={setUsername}
+        email={email} setEmail={setEmail} password={password} setPassword={setPassword}
+        displayName={displayName} setDisplayName={setDisplayName}
+      />
       <AppAccessFieldset apps={apps} onToggle={handleToggle} onRoleChange={handleRoleChange} />
       <div className="editor-actions">
         <button type="submit">Save</button>

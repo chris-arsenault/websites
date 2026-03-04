@@ -16,6 +16,7 @@ const userPoolId = process.env.COGNITO_USER_POOL_ID!;
 
 export type UserRecord = {
   username: string;
+  email?: string;
   displayName?: string;
   apps: Record<string, string>;
 };
@@ -44,9 +45,7 @@ export const deleteUser = async (username: string): Promise<void> => {
   );
 };
 
-const isEmail = (value: string) => value.includes("@");
-
-export const ensureCognitoUser = async (username: string, password?: string): Promise<void> => {
+export const ensureCognitoUser = async (username: string, password?: string, email?: string): Promise<void> => {
   const existing = await cognito.send(
     new ListUsersCommand({
       UserPoolId: userPoolId,
@@ -64,8 +63,8 @@ export const ensureCognitoUser = async (username: string, password?: string): Pr
 
   if (!password) throw new Error("Password is required for new users");
 
-  const attributes = isEmail(username)
-    ? [{ Name: "email", Value: username }, { Name: "email_verified", Value: "true" }]
+  const attributes = email
+    ? [{ Name: "email", Value: email }, { Name: "email_verified", Value: "true" }]
     : [];
 
   await cognito.send(

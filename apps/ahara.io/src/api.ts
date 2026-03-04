@@ -3,6 +3,7 @@ import { getIdToken } from "./auth";
 
 export type UserRecord = {
   username: string;
+  email?: string;
   displayName?: string;
   apps: Record<string, string>;
   password?: string;
@@ -25,7 +26,7 @@ export const saveUser = async (user: UserRecord): Promise<UserRecord> => {
   const res = await fetch(`${config.apiBaseUrl}/users/${encodeURIComponent(user.username)}`, {
     method: "PUT",
     headers: await authHeaders(),
-    body: JSON.stringify({ displayName: user.displayName, apps: user.apps, password: user.password })
+    body: JSON.stringify({ displayName: user.displayName, email: user.email, apps: user.apps, password: user.password })
   });
   if (!res.ok) throw new Error(await res.text());
   const body = (await res.json()) as { data: UserRecord };
