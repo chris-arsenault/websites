@@ -35,7 +35,7 @@ export const verifyAuth = async (authorization?: string): Promise<UserContext> =
     const payload = await verifierInstance.verify(token);
     return {
       sub: payload.sub,
-      email: payload.email
+      email: typeof payload.email === "string" ? payload.email : undefined
     };
   } catch (error) {
     logWarn("auth.verify.failed", { error: (error as Error).message });
