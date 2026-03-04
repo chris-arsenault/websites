@@ -302,7 +302,7 @@ const App = () => {
       }
       setAuth({ status: "signedOut", token: "", username: "" });
     };
-    loadSession();
+    void loadSession();
   }, []);
 
   useEffect(() => {
@@ -317,7 +317,7 @@ const App = () => {
         setLoading(false);
       }
     };
-    loadTastings();
+    void loadTastings();
   }, []);
 
   // Persist productType filter to localStorage
@@ -345,7 +345,7 @@ const App = () => {
         setErrorMessage("Unable to start camera preview.");
       }
     };
-    startPreview();
+    void startPreview();
     return () => {
       if (video.srcObject === cameraStream) {
         video.srcObject = null;
@@ -364,7 +364,7 @@ const App = () => {
         setErrorMessage("Unable to start camera preview.");
       }
     };
-    startPreview();
+    void startPreview();
     return () => {
       if (video.srcObject === ingredientsCameraStream) {
         video.srcObject = null;
@@ -383,7 +383,7 @@ const App = () => {
         setErrorMessage("Unable to start camera preview.");
       }
     };
-    startPreview();
+    void startPreview();
     return () => {
       if (video.srcObject === nutritionCameraStream) {
         video.srcObject = null;
@@ -978,7 +978,7 @@ const App = () => {
                     <button className="menu-item" onClick={handleSignOut}>Sign out</button>
                   </>
                 ) : auth.status === "signedOut" ? (
-                  <form className="menu-auth-form" onSubmit={handleSignIn}>
+                  <form className="menu-auth-form" onSubmit={(e) => void handleSignIn(e)}>
                     <input name="username" placeholder="Username" required autoComplete="username" />
                     <input name="password" type="password" placeholder="Password" required autoComplete="current-password" />
                     <button type="submit">Sign in</button>
@@ -1063,7 +1063,7 @@ const App = () => {
               <button type="button" className="form-close" onClick={closeForm}>×</button>
             </header>
 
-            <form className="form-body" onSubmit={handleSubmit}>
+            <form className="form-body" onSubmit={(e) => void handleSubmit(e)}>
               {/* Media Capture - Compact Grid */}
               <section className="form-section">
                 <div className="form-section-header">
@@ -1086,10 +1086,10 @@ const App = () => {
                       ) : cameraActive ? (
                         <div className="media-camera">
                           <video ref={videoRef} playsInline muted autoPlay />
-                          <button type="button" onClick={capturePhoto}>📸 Capture</button>
+                          <button type="button" onClick={() => void capturePhoto()}>📸 Capture</button>
                         </div>
                       ) : (
-                        <button type="button" className="media-add" onClick={startCamera}>
+                        <button type="button" className="media-add" onClick={() => void startCamera()}>
                           <span>📷</span>
                           <small>Product</small>
                         </button>
@@ -1105,10 +1105,10 @@ const App = () => {
                       ) : ingredientsCameraActive ? (
                         <div className="media-camera">
                           <video ref={ingredientsVideoRef} playsInline muted autoPlay />
-                          <button type="button" onClick={captureIngredientsPhoto}>📸</button>
+                          <button type="button" onClick={() => void captureIngredientsPhoto()}>📸</button>
                         </div>
                       ) : (
-                        <button type="button" className="media-add" onClick={startIngredientsCamera}>
+                        <button type="button" className="media-add" onClick={() => void startIngredientsCamera()}>
                           <span>📋</span>
                           <small>Ingredients</small>
                         </button>
@@ -1124,10 +1124,10 @@ const App = () => {
                       ) : nutritionCameraActive ? (
                         <div className="media-camera">
                           <video ref={nutritionVideoRef} playsInline muted autoPlay />
-                          <button type="button" onClick={captureNutritionPhoto}>📸</button>
+                          <button type="button" onClick={() => void captureNutritionPhoto()}>📸</button>
                         </div>
                       ) : (
-                        <button type="button" className="media-add" onClick={startNutritionCamera}>
+                        <button type="button" className="media-add" onClick={() => void startNutritionCamera()}>
                           <span>📊</span>
                           <small>Nutrition</small>
                         </button>
@@ -1150,7 +1150,7 @@ const App = () => {
                         <button type="button" onClick={stopRecording}>Stop</button>
                       </div>
                     ) : (
-                      <button type="button" className="voice-start" onClick={startRecording}>
+                      <button type="button" className="voice-start" onClick={() => void startRecording()}>
                         🎙️ Record tasting notes
                       </button>
                     )}
@@ -1454,7 +1454,7 @@ const App = () => {
                       <div className="card-actions">
                         <button onClick={() => openEditForm(item)} title="Edit">Edit</button>
                         {(item.imageKey || item.ingredientsImageKey || item.nutritionImageKey) && (
-                          <button onClick={() => handleRerun(item)} disabled={rerunId === item.id} title="Rerun AI">
+                          <button onClick={() => void handleRerun(item)} disabled={rerunId === item.id} title="Rerun AI">
                             {rerunId === item.id ? "..." : "↻"}
                           </button>
                         )}
@@ -1489,7 +1489,7 @@ const App = () => {
               <button type="button" className="btn-ghost" onClick={closeDeleteModal} disabled={deleteStatus === "deleting"}>
                 Cancel
               </button>
-              <button type="button" className="btn-danger" onClick={confirmDelete} disabled={deleteStatus === "deleting"}>
+              <button type="button" className="btn-danger" onClick={() => void confirmDelete()} disabled={deleteStatus === "deleting"}>
                 {deleteStatus === "deleting" ? "Deleting..." : "Delete"}
               </button>
             </div>
