@@ -11,7 +11,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["node_modules/", "dist/"],
+    ignores: ["node_modules/", "dist/", "backend/", "scripts/"],
   },
   {
     ...js.configs.recommended,
@@ -63,22 +63,8 @@ export default tseslint.config(
       "react-perf/jsx-no-new-function-as-prop": ["warn", { nativeAllowList: "all" }],
       "react-perf/jsx-no-jsx-as-prop": ["warn", { nativeAllowList: "all" }],
       "react/jsx-no-constructed-context-values": "warn",
-      // a11y — downgraded to warn for existing code
-      "jsx-a11y/click-events-have-key-events": "warn",
-      "jsx-a11y/no-static-element-interactions": "warn",
-      "jsx-a11y/no-noninteractive-element-interactions": "warn",
-      "jsx-a11y/media-has-caption": "warn",
-      "jsx-a11y/label-has-associated-control": "warn",
     },
   },
   sonarjs.configs.recommended,
-  {
-    rules: {
-      // Downgraded to warn for existing code — fix incrementally
-      "sonarjs/no-nested-conditional": "warn",
-      "sonarjs/cognitive-complexity": "warn",
-      "sonarjs/no-identical-functions": "warn",
-    },
-  },
   prettier,
 );

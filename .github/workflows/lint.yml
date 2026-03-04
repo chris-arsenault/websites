@@ -1,0 +1,65 @@
+name: Lint
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { path: "apps/ahara.io", name: "ahara-frontend" }
+          - { path: "apps/ahara.io/backend", name: "ahara-backend" }
+          - { path: "apps/scorchbook/frontend", name: "scorchbook-frontend" }
+          - { path: "apps/scorchbook/backend", name: "scorchbook-backend" }
+          - { path: "apps/auth-trigger", name: "auth-trigger" }
+    name: eslint (${{ matrix.app.name }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install
+        working-directory: ${{ matrix.app.path }}
+        run: npm ci
+      - name: Lint
+        working-directory: ${{ matrix.app.path }}
+        run: npx eslint .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { path: "apps/ahara.io", name: "ahara-frontend" }
+          - { path: "apps/ahara.io/backend", name: "ahara-backend" }
+          - { path: "apps/scorchbook/frontend", name: "scorchbook-frontend" }
+          # scorchbook backend has pre-existing TS errors — enable after fixing
+          # - { path: "apps/scorchbook/backend", name: "scorchbook-backend" }
+          - { path: "apps/auth-trigger", name: "auth-trigger" }
+    name: typecheck (${{ matrix.app.name }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install
+        working-directory: ${{ matrix.app.path }}
+        run: npm ci
+      - name: Typecheck
+        working-directory: ${{ matrix.app.path }}
+        run: npx tsc --noEmit
+
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    name: terraform fmt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+      - name: Check formatting
+        working-directory: infrastructure/terraform
+        run: terraform fmt -check -recursive

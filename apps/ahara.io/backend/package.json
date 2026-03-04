@@ -5,7 +5,8 @@
   "type": "commonjs",
   "main": "dist/handler.js",
   "scripts": {
-    "build": "esbuild src/handler.ts --bundle --platform=node --target=node24 --outdir=dist --sourcemap"
+    "build": "esbuild src/handler.ts --bundle --platform=node --target=node24 --outdir=dist --sourcemap",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.577.0",
@@ -14,10 +15,17 @@
     "aws-jwt-verify": "^4.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.3",
     "@types/aws-lambda": "^8.10.130",
     "@types/node": "^20.12.12",
     "esbuild": "^0.21.5",
-    "typescript": "^5.5.4"
+    "eslint": "^9.39.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-sonarjs": "^3.0.7",
+    "globals": "^17.3.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.56.1"
   },
   "engines": {
     "node": "24.12.0"

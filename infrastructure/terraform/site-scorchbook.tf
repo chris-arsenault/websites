@@ -64,8 +64,8 @@ module "scorchbook_api" {
     ALLOWED_ORIGINS       = join(",", local.scorchbook_allowed_origins)
     TAVILY_API_KEY        = data.aws_secretsmanager_secret_version.tavily.secret_string
   }
-  iam_policy_json    = data.aws_iam_policy_document.scorchbook_lambda.json
-  routes             = [
+  iam_policy_json = data.aws_iam_policy_document.scorchbook_lambda.json
+  routes = [
     "GET /tastings",
     "POST /tastings",
     "POST /tastings/{id}/media",
