@@ -228,13 +228,21 @@ export default tseslint.config(
 
   // Disable no-js-file-extension for files that must be .js
   {
-    files: ["eslint.config.js", "eslint-rules/**/*.js"],
+    files: ["eslint.config.js", "eslint-rules/**/*.js", "**/public/**/*.js"],
     rules: {
       "local/no-js-file-extension": "off",
     },
   },
 
-  // Scorchbook frontend — downgraded rules for pre-existing issues
+  // Public config files use intentional fallback patterns
+  {
+    files: ["**/public/config.js"],
+    rules: {
+      "local/no-escape-hatches": "off",
+    },
+  },
+
+  // Scorchbook frontend — downgraded + scorchbook-specific rules
   {
     files: ["apps/scorchbook/frontend/src/**/*.{ts,tsx}"],
     rules: {
@@ -249,6 +257,10 @@ export default tseslint.config(
       "local/no-manual-async-state": "warn",
       "local/no-manual-expand-state": "warn",
       "local/no-manual-view-header": "warn",
+      // Drift rules from other projects — false positives on scorchbook CSS
+      "local/no-raw-error-div": "off",
+      "local/no-viewer-pattern-drift": "off",
+      "local/no-toggle-css-drift": "off",
     },
   },
 
