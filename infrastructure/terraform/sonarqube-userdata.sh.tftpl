@@ -1,6 +1,7 @@
 #!/bin/bash
-set -euo pipefail
-exec > /var/log/sonarqube-setup.log 2>&1
+set -euxo pipefail
+exec > >(tee /var/log/sonarqube-setup.log) 2>&1
+trap 'echo "FAILED at line $$LINENO: exit code $$?"' ERR
 
 AWS_REGION="${aws_region}"
 DOMAIN="${domain}"
@@ -32,26 +33,45 @@ curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-co
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # --- Mount data volume ---
+# On Nitro instances (t3.*), /dev/xvdf maps to /dev/nvme*n1.
+# Find the actual block device by waiting for any new NVMe or xvd device.
 echo "Waiting for data volume to attach..."
+ACTUAL_DEVICE=""
 for i in $$(seq 1 30); do
+  # Check the requested device name first
   if [ -b "$$DATA_DEVICE" ]; then
-    echo "Data volume available after $$i attempts"
+    ACTUAL_DEVICE="$$DATA_DEVICE"
     break
   fi
+  # On Nitro instances, check for NVMe device (EBS volumes appear as /dev/nvme*n1)
+  for dev in /dev/nvme1n1 /dev/nvme2n1; do
+    if [ -b "$$dev" ]; then
+      ACTUAL_DEVICE="$$dev"
+      break 2
+    fi
+  done
+  echo "Attempt $$i: waiting for data volume..."
   sleep 5
 done
 
+if [ -z "$$ACTUAL_DEVICE" ]; then
+  echo "ERROR: Data volume never appeared"
+  exit 1
+fi
+echo "Data volume found at $$ACTUAL_DEVICE"
+
 # Format only if no filesystem exists (preserves data on instance replacement)
-if ! blkid "$$DATA_DEVICE" >/dev/null 2>&1; then
+if ! blkid "$$ACTUAL_DEVICE" >/dev/null 2>&1; then
   echo "Formatting data volume..."
-  mkfs.ext4 "$$DATA_DEVICE"
+  mkfs.ext4 "$$ACTUAL_DEVICE"
 fi
 
 mkdir -p "$$DATA_DIR"
-mount "$$DATA_DEVICE" "$$DATA_DIR"
+mount "$$ACTUAL_DEVICE" "$$DATA_DIR"
 
-# Persist mount across reboots
-echo "$$DATA_DEVICE $$DATA_DIR ext4 defaults,nofail 0 2" >> /etc/fstab
+# Persist mount across reboots using UUID (stable across device name changes)
+DATA_UUID=$$(blkid -s UUID -o value "$$ACTUAL_DEVICE")
+echo "UUID=$$DATA_UUID $$DATA_DIR ext4 defaults,nofail 0 2" >> /etc/fstab
 
 # Create subdirectories for Docker bind mounts
 mkdir -p "$$DATA_DIR/postgresql" "$$DATA_DIR/sonarqube-data" "$$DATA_DIR/sonarqube-extensions" "$$DATA_DIR/caddy"
