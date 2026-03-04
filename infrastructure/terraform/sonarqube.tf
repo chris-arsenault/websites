@@ -7,10 +7,11 @@ resource "random_password" "sonarqube_db" {
 
 resource "random_password" "sonarqube_admin" {
   length      = 16
-  special     = false
+  special     = true
   min_upper   = 1
   min_lower   = 1
   min_numeric = 1
+  min_special = 1
 }
 
 # --- SSM Parameters ---
@@ -175,6 +176,11 @@ resource "aws_instance" "sonarqube" {
     ssm_prefix      = "/websites/sonarqube"
     oidc_plugin_url = "https://github.com/sonar-auth-oidc/sonar-auth-oidc/releases/download/v3.0.0/sonar-auth-oidc-plugin-3.0.0.jar"
     data_device     = "/dev/xvdf"
+    # Hash of secrets — changes here trigger instance replacement via user_data_replace_on_change
+    secrets_version = sha256(join(",", [
+      random_password.sonarqube_admin.result,
+      random_password.sonarqube_db.result,
+    ]))
   })
 
   user_data_replace_on_change = true

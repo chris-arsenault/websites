@@ -2,6 +2,7 @@
 set -euo pipefail
 exec > >(tee /var/log/sonarqube-setup.log /dev/console) 2>&1
 
+# secrets_version: ${secrets_version}
 AWS_REGION="${aws_region}"
 DOMAIN="${domain}"
 COGNITO_POOL_ID="${cognito_pool_id}"
@@ -190,21 +191,26 @@ if [ "$STATUS" != "UP" ]; then
   exit 1
 fi
 
-# --- Change admin password ---
-curl -sf -u admin:admin -X POST \
-  "http://localhost:9000/api/users/change_password" \
-  -d "login=admin&previousPassword=admin&password=$ADMIN_PASSWORD"
-echo "Admin password changed"
+# --- Change admin password (skip if already changed) ---
+if curl -sf -u admin:admin "http://localhost:9000/api/system/status" >/dev/null 2>&1; then
+  curl -sf -u admin:admin -X POST \
+    "http://localhost:9000/api/users/change_password" \
+    -d "login=admin&previousPassword=admin&password=$ADMIN_PASSWORD"
+  echo "Admin password changed"
+else
+  echo "Admin password already changed, skipping"
+fi
 
-# --- Create project ---
-curl -sf -u "admin:$ADMIN_PASSWORD" -X POST \
-  "http://localhost:9000/api/projects/create?name=websites&project=websites" || true
-echo "Project created"
-
-# --- Generate CI token ---
-TOKEN_RESPONSE=$(curl -sf -u "admin:$ADMIN_PASSWORD" -X POST \
-  "http://localhost:9000/api/user_tokens/generate?name=ci&type=PROJECT_ANALYSIS_TOKEN&projectKey=websites")
-CI_TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+# --- Generate CI token (skip if already in SSM) ---
+EXISTING_TOKEN=$(ssm_get ci-token 2>/dev/null || true)
+if [ -n "$EXISTING_TOKEN" ]; then
+  echo "CI token already exists in SSM, skipping"
+  CI_TOKEN="$EXISTING_TOKEN"
+else
+  TOKEN_RESPONSE=$(curl -sf -u "admin:$ADMIN_PASSWORD" -X POST \
+    "http://localhost:9000/api/user_tokens/generate?name=ci&type=GLOBAL_ANALYSIS_TOKEN")
+  CI_TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+fi
 
 if [ -n "$CI_TOKEN" ]; then
   ssm_put ci-token "$CI_TOKEN"
