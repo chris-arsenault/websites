@@ -9,24 +9,72 @@ import sonarjs from "eslint-plugin-sonarjs";
 import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 import maxJsxProps from "./eslint-rules/max-jsx-props.js";
+import noAppCssBaseDuplication from "./eslint-rules/no-app-css-base-duplication.js";
+import noArchivistSectionDrift from "./eslint-rules/no-archivist-section-drift.js";
+import noBulkShellDrift from "./eslint-rules/no-bulk-shell-drift.js";
+import noCosmoEditorDrift from "./eslint-rules/no-cosmo-editor-drift.js";
+import noCrossAppAlias from "./eslint-rules/no-cross-app-alias.js";
+import noDashboardSectionDrift from "./eslint-rules/no-dashboard-section-drift.js";
 import noDirectFetch from "./eslint-rules/no-direct-fetch.js";
 import noDirectStoreImport from "./eslint-rules/no-direct-store-import.js";
+import noDuplicateComponentCss from "./eslint-rules/no-duplicate-component-css.js";
+import noErrorBoundaryWithoutBase from "./eslint-rules/no-error-boundary-without-base.js";
 import noEscapeHatches from "./eslint-rules/no-escape-hatches.js";
+import noHintCssDuplication from "./eslint-rules/no-hint-css-duplication.js";
+import noInlineIdGeneration from "./eslint-rules/no-inline-id-generation.js";
+import noInlineKeyboardNav from "./eslint-rules/no-inline-keyboard-nav.js";
 import noInlineStyles from "./eslint-rules/no-inline-styles.js";
+import noJsFileExtension from "./eslint-rules/no-js-file-extension.js";
 import noManualAsyncState from "./eslint-rules/no-manual-async-state.js";
 import noManualExpandState from "./eslint-rules/no-manual-expand-state.js";
 import noManualViewHeader from "./eslint-rules/no-manual-view-header.js";
+import noMatrixCssDuplication from "./eslint-rules/no-matrix-css-duplication.js";
+import noNonVitestTesting from "./eslint-rules/no-non-vitest-testing.js";
+import noPanelCssDuplication from "./eslint-rules/no-panel-css-duplication.js";
+import noRawErrorDiv from "./eslint-rules/no-raw-error-div.js";
+import noRemoteShellDrift from "./eslint-rules/no-remote-shell-drift.js";
+import noSchemaEditorCssDrift from "./eslint-rules/no-schema-editor-css-drift.js";
+import noTabCompanionCss from "./eslint-rules/no-tab-companion-css.js";
+import noToggleCssDrift from "./eslint-rules/no-toggle-css-drift.js";
+import noVersionToolbarDrift from "./eslint-rules/no-version-toolbar-drift.js";
+import noViewerPatternDrift from "./eslint-rules/no-viewer-pattern-drift.js";
+import noVizOverlayDrift from "./eslint-rules/no-viz-overlay-drift.js";
+import noVizUtilityDrift from "./eslint-rules/no-viz-utility-drift.js";
 
 const localPlugin = {
   rules: {
     "max-jsx-props": maxJsxProps,
+    "no-app-css-base-duplication": noAppCssBaseDuplication,
+    "no-archivist-section-drift": noArchivistSectionDrift,
+    "no-bulk-shell-drift": noBulkShellDrift,
+    "no-cosmo-editor-drift": noCosmoEditorDrift,
+    "no-cross-app-alias": noCrossAppAlias,
+    "no-dashboard-section-drift": noDashboardSectionDrift,
     "no-direct-fetch": noDirectFetch,
     "no-direct-store-import": noDirectStoreImport,
+    "no-duplicate-component-css": noDuplicateComponentCss,
+    "no-error-boundary-without-base": noErrorBoundaryWithoutBase,
     "no-escape-hatches": noEscapeHatches,
+    "no-hint-css-duplication": noHintCssDuplication,
+    "no-inline-id-generation": noInlineIdGeneration,
+    "no-inline-keyboard-nav": noInlineKeyboardNav,
     "no-inline-styles": noInlineStyles,
+    "no-js-file-extension": noJsFileExtension,
     "no-manual-async-state": noManualAsyncState,
     "no-manual-expand-state": noManualExpandState,
     "no-manual-view-header": noManualViewHeader,
+    "no-matrix-css-duplication": noMatrixCssDuplication,
+    "no-non-vitest-testing": noNonVitestTesting,
+    "no-panel-css-duplication": noPanelCssDuplication,
+    "no-raw-error-div": noRawErrorDiv,
+    "no-remote-shell-drift": noRemoteShellDrift,
+    "no-schema-editor-css-drift": noSchemaEditorCssDrift,
+    "no-tab-companion-css": noTabCompanionCss,
+    "no-toggle-css-drift": noToggleCssDrift,
+    "no-version-toolbar-drift": noVersionToolbarDrift,
+    "no-viewer-pattern-drift": noViewerPatternDrift,
+    "no-viz-overlay-drift": noVizOverlayDrift,
+    "no-viz-utility-drift": noVizUtilityDrift,
   },
 };
 
@@ -143,12 +191,52 @@ export default tseslint.config(
     },
   },
 
-  // Scorchbook frontend — downgraded rules for pre-existing issues
+  // Local custom rules — all files (rules self-filter by filename)
   {
-    files: ["apps/scorchbook/frontend/src/**/*.{ts,tsx}"],
     plugins: {
       local: localPlugin,
     },
+    rules: {
+      "local/no-app-css-base-duplication": "warn",
+      "local/no-archivist-section-drift": "warn",
+      "local/no-bulk-shell-drift": "warn",
+      "local/no-cosmo-editor-drift": "warn",
+      "local/no-cross-app-alias": "warn",
+      "local/no-dashboard-section-drift": "warn",
+      "local/no-duplicate-component-css": "warn",
+      "local/no-error-boundary-without-base": "warn",
+      "local/no-escape-hatches": "warn",
+      "local/no-hint-css-duplication": "warn",
+      "local/no-inline-id-generation": "warn",
+      "local/no-inline-keyboard-nav": "warn",
+      "local/no-inline-styles": "warn",
+      "local/no-js-file-extension": "warn",
+      "local/no-matrix-css-duplication": "warn",
+      "local/no-non-vitest-testing": "warn",
+      "local/no-panel-css-duplication": "warn",
+      "local/no-raw-error-div": "warn",
+      "local/no-remote-shell-drift": "warn",
+      "local/no-schema-editor-css-drift": "warn",
+      "local/no-tab-companion-css": "warn",
+      "local/no-toggle-css-drift": "warn",
+      "local/no-version-toolbar-drift": "warn",
+      "local/no-viewer-pattern-drift": "warn",
+      "local/no-viz-overlay-drift": "warn",
+      "local/no-viz-utility-drift": "warn",
+    },
+  },
+
+  // Disable no-js-file-extension for files that must be .js
+  {
+    files: ["eslint.config.js", "eslint-rules/**/*.js"],
+    rules: {
+      "local/no-js-file-extension": "off",
+    },
+  },
+
+  // Scorchbook frontend — downgraded rules for pre-existing issues
+  {
+    files: ["apps/scorchbook/frontend/src/**/*.{ts,tsx}"],
     rules: {
       "jsx-a11y/click-events-have-key-events": "warn",
       "jsx-a11y/no-static-element-interactions": "warn",
@@ -158,8 +246,6 @@ export default tseslint.config(
       "local/max-jsx-props": "warn",
       "local/no-direct-fetch": "warn",
       "local/no-direct-store-import": "warn",
-      "local/no-escape-hatches": "warn",
-      "local/no-inline-styles": "warn",
       "local/no-manual-async-state": "warn",
       "local/no-manual-expand-state": "warn",
       "local/no-manual-view-header": "warn",
