@@ -2,6 +2,7 @@
 set -euo pipefail
 exec > >(tee /var/log/sonarqube-setup.log /dev/console) 2>&1
 
+# secrets_version: ${secrets_version}
 AWS_REGION="${aws_region}"
 DOMAIN="${domain}"
 COGNITO_POOL_ID="${cognito_pool_id}"
