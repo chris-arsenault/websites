@@ -80,6 +80,16 @@ data "aws_iam_policy_document" "sonarqube_instance" {
     ]
     resources = ["arn:aws:ssm:${data.aws_region.current.id}:*:parameter/websites/sonarqube/*"]
   }
+
+  statement {
+    actions   = ["kms:Decrypt"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ssm.${data.aws_region.current.id}.amazonaws.com"]
+    }
+  }
 }
 
 resource "aws_iam_role" "sonarqube" {
