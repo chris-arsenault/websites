@@ -9,40 +9,34 @@ export function AdminPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    try {
-      setLoading(true);
-      setUsers(await fetchUsers());
-      setError("");
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
+  const load = useCallback(() => {
+    fetchUsers()
+      .then((users) => {
+        setUsers(users);
+        setError("");
+      })
+      .catch((err: unknown) => setError((err as Error).message))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    void load();
+    load();
   }, [load]);
 
-  const handleSave = async (user: UserRecord) => {
-    try {
-      await saveUser(user);
-      setEditing(null);
-      await load();
-    } catch (err) {
-      setError((err as Error).message);
-    }
+  const handleSave = (user: UserRecord) => {
+    saveUser(user)
+      .then(() => {
+        setEditing(null);
+        load();
+      })
+      .catch((err: unknown) => setError((err as Error).message));
   };
 
-  const handleDelete = async (username: string) => {
+  const handleDelete = (username: string) => {
     if (!confirm(`Delete user ${username}?`)) return;
-    try {
-      await removeUser(username);
-      await load();
-    } catch (err) {
-      setError((err as Error).message);
-    }
+    removeUser(username)
+      .then(() => load())
+      .catch((err: unknown) => setError((err as Error).message));
   };
 
   if (loading) return <p>Loading...</p>;
@@ -53,14 +47,14 @@ export function AdminPage() {
       {editing ? (
         <UserEditor
           user={editing === "new" ? undefined : editing}
-          onSave={(u) => void handleSave(u)}
+          onSave={handleSave}
           onCancel={() => setEditing(null)}
         />
       ) : (
         <UserList
           users={users}
           onEdit={(u) => setEditing(u)}
-          onDelete={(u) => void handleDelete(u)}
+          onDelete={handleDelete}
           onAdd={() => setEditing("new")}
         />
       )}

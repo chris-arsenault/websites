@@ -11,7 +11,9 @@ type Props = {
 };
 
 export function UserEditor({ user, onSave, onCancel }: Props) {
+  const isNew = !user;
   const [username, setUsername] = useState(user?.username ?? "");
+  const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");
   const [apps, setApps] = useState<Record<string, string>>(user?.apps ?? {});
 
@@ -33,22 +35,34 @@ export function UserEditor({ user, onSave, onCancel }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ username, displayName, apps });
+    onSave({ username, displayName, apps, ...(isNew && password ? { password } : {}) });
   };
 
   return (
     <form className="user-editor" onSubmit={handleSubmit}>
       <h3>{user ? "Edit User" : "Add User"}</h3>
       <label>
-        Email
+        Username
         <input
-          type="email"
+          type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           disabled={!!user}
           required
         />
       </label>
+      {isNew && (
+        <label>
+          Password
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+        </label>
+      )}
       <label>
         Display Name
         <input

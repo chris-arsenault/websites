@@ -12,6 +12,7 @@ data "aws_iam_policy_document" "ahara_lambda" {
   statement {
     actions = [
       "cognito-idp:AdminCreateUser",
+      "cognito-idp:AdminSetUserPassword",
       "cognito-idp:AdminDisableUser",
       "cognito-idp:AdminEnableUser",
       "cognito-idp:ListUsers"

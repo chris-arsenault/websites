@@ -176,7 +176,9 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    void getSession().then((s) => setAuthenticated(!!s));
+    getSession()
+      .then((s) => setAuthenticated(!!s))
+      .catch(() => setAuthenticated(false));
   }, []);
 
   const handleLogin = () => {

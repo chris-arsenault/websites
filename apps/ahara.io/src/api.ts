@@ -5,6 +5,7 @@ export type UserRecord = {
   username: string;
   displayName?: string;
   apps: Record<string, string>;
+  password?: string;
 };
 
 const authHeaders = async () => {
@@ -16,7 +17,7 @@ const authHeaders = async () => {
 export const fetchUsers = async (): Promise<UserRecord[]> => {
   const res = await fetch(`${config.apiBaseUrl}/users`, { headers: await authHeaders() });
   if (!res.ok) throw new Error(await res.text());
-  const body = await res.json();
+  const body = (await res.json()) as { data: UserRecord[] };
   return body.data;
 };
 
@@ -24,10 +25,10 @@ export const saveUser = async (user: UserRecord): Promise<UserRecord> => {
   const res = await fetch(`${config.apiBaseUrl}/users/${encodeURIComponent(user.username)}`, {
     method: "PUT",
     headers: await authHeaders(),
-    body: JSON.stringify({ displayName: user.displayName, apps: user.apps })
+    body: JSON.stringify({ displayName: user.displayName, apps: user.apps, password: user.password })
   });
   if (!res.ok) throw new Error(await res.text());
-  const body = await res.json();
+  const body = (await res.json()) as { data: UserRecord };
   return body.data;
 };
 

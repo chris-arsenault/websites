@@ -30,10 +30,7 @@ export const signIn = (username: string, password: string): Promise<CognitoUserS
   return new Promise((resolve, reject) => {
     user.authenticateUser(details, {
       onSuccess: (session) => resolve(session),
-      onFailure: (error) => reject(error),
-      newPasswordRequired: () => {
-        reject(new Error("NEW_PASSWORD_REQUIRED"));
-      }
+      onFailure: (error) => reject(error)
     });
   });
 };
