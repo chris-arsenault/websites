@@ -20,6 +20,10 @@ data "aws_iam_policy_document" "auth_trigger" {
     actions   = ["dynamodb:GetItem"]
     resources = [module.user_access_table.arn]
   }
+  statement {
+    actions   = ["ssm:GetParameter"]
+    resources = ["arn:aws:ssm:*:*:parameter/websites/auth-trigger/client-map"]
+  }
 }
 
 resource "aws_iam_role" "auth_trigger" {
@@ -57,10 +61,8 @@ resource "aws_lambda_function" "auth_trigger" {
 
   environment {
     variables = {
-      TABLE_NAME = module.user_access_table.name
-      CLIENT_MAP = jsonencode({
-        for key, id in module.cognito.client_ids : id => key
-      })
+      TABLE_NAME       = module.user_access_table.name
+      CLIENT_MAP_PARAM = "/websites/auth-trigger/client-map"
     }
   }
 
@@ -76,4 +78,17 @@ resource "aws_lambda_permission" "auth_trigger_cognito" {
   function_name = aws_lambda_function.auth_trigger.function_name
   principal     = "cognito-idp.amazonaws.com"
   source_arn    = module.cognito.user_pool_arn
+}
+
+resource "aws_ssm_parameter" "auth_client_map" {
+  name = "/websites/auth-trigger/client-map"
+  type = "String"
+  value = jsonencode({
+    for key, id in module.cognito.client_ids : id => key
+  })
+
+  tags = {
+    Project   = "Websites"
+    ManagedBy = "Terraform"
+  }
 }
