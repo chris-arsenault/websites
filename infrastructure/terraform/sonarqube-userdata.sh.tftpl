@@ -33,6 +33,17 @@ chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 sysctl -w vm.max_map_count=524288
 echo "vm.max_map_count=524288" >> /etc/sysctl.conf
 
+# --- Wait for instance profile credentials ---
+echo "Waiting for instance profile credentials..."
+for i in $$(seq 1 30); do
+  if aws sts get-caller-identity --region "$$AWS_REGION" >/dev/null 2>&1; then
+    echo "Credentials available after $$i attempts"
+    break
+  fi
+  echo "Attempt $$i: no credentials yet"
+  sleep 5
+done
+
 # --- Read secrets from SSM ---
 DB_PASSWORD=$$(ssm_get db-password)
 ADMIN_PASSWORD=$$(ssm_get admin-password)
