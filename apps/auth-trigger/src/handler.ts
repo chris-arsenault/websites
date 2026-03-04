@@ -23,6 +23,11 @@ export const handler: PreAuthenticationTriggerHandler = async (
   const clientId = event.callerContext.clientId;
   const username = event.userName;
 
+  // Seeded admin user always passes
+  if (username === "chris") {
+    return event;
+  }
+
   const map = await getClientMap();
   const appKey = map[clientId];
   if (!appKey) {
