@@ -22,7 +22,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
+    <form className="login-form" onSubmit={(e) => void handleSubmit(e)}>
       <h2>Admin Login</h2>
       {error && <p className="error">{error}</p>}
       <input

@@ -22,7 +22,7 @@ export function AdminPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const handleSave = async (user: UserRecord) => {
@@ -53,14 +53,14 @@ export function AdminPage() {
       {editing ? (
         <UserEditor
           user={editing === "new" ? undefined : editing}
-          onSave={handleSave}
+          onSave={(u) => void handleSave(u)}
           onCancel={() => setEditing(null)}
         />
       ) : (
         <UserList
           users={users}
           onEdit={(u) => setEditing(u)}
-          onDelete={handleDelete}
+          onDelete={(u) => void handleDelete(u)}
           onAdd={() => setEditing("new")}
         />
       )}
