@@ -13,7 +13,7 @@ let clientMap: Record<string, string> | null = null;
 const getClientMap = async (): Promise<Record<string, string>> => {
   if (clientMap) return clientMap;
   const result = await ssm.send(new GetParameterCommand({ Name: clientMapParam }));
-  clientMap = JSON.parse(result.Parameter?.Value ?? "{}");
+  clientMap = JSON.parse(result.Parameter?.Value ?? "{}") as Record<string, string>;
   return clientMap!;
 };
 

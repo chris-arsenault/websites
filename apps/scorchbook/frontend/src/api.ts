@@ -21,7 +21,7 @@ export const createTasting = async (payload: CreateTastingInput, token: string):
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
+    const errorBody = (await response.json().catch(() => ({}))) as { message?: string };
     throw new Error(errorBody.message ?? "Failed to create tasting");
   }
 
@@ -41,7 +41,7 @@ export const rerunTasting = async (id: string, token: string): Promise<void> => 
     }
   });
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
+    const errorBody = (await response.json().catch(() => ({}))) as { message?: string };
     throw new Error(errorBody.message ?? "Failed to rerun pipeline");
   }
 };
@@ -61,7 +61,7 @@ export const updateTastingMedia = async (
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
+    const errorBody = (await response.json().catch(() => ({}))) as { message?: string };
     throw new Error(errorBody.message ?? "Failed to update media");
   }
 
@@ -77,7 +77,7 @@ export const deleteTasting = async (id: string, token: string): Promise<void> =>
     }
   });
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
+    const errorBody = (await response.json().catch(() => ({}))) as { message?: string };
     throw new Error(errorBody.message ?? "Failed to delete tasting");
   }
 };
