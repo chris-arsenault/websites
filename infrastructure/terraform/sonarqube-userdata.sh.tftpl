@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euxo pipefail
-exec > >(tee /var/log/sonarqube-setup.log) 2>&1
+exec > >(tee /var/log/sonarqube-setup.log /dev/console) 2>&1
 trap 'echo "FAILED at line $$LINENO: exit code $$?"' ERR
 
 AWS_REGION="${aws_region}"

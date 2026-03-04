@@ -103,6 +103,11 @@ resource "aws_iam_role_policy" "sonarqube" {
   policy = data.aws_iam_policy_document.sonarqube_instance.json
 }
 
+resource "aws_iam_role_policy_attachment" "sonarqube_ssm_core" {
+  role       = aws_iam_role.sonarqube.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 resource "aws_iam_instance_profile" "sonarqube" {
   name = "websites-sonarqube"
   role = aws_iam_role.sonarqube.name
@@ -171,6 +176,8 @@ resource "aws_instance" "sonarqube" {
     oidc_plugin_url = "https://github.com/sonar-auth-oidc/sonar-auth-oidc/releases/download/v3.0.0/sonar-auth-oidc-plugin-3.0.0.jar"
     data_device     = "/dev/xvdf"
   })
+
+  user_data_replace_on_change = true
 
   tags = { Name = "websites-sonarqube" }
 
