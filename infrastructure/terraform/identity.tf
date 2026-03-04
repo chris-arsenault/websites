@@ -20,7 +20,7 @@ resource "aws_dynamodb_table_item" "seed_user" {
   hash_key   = "username"
 
   item = jsonencode({
-    username    = { S = "chris@chris-arsenault.net" }
+    username    = { S = "chris" }
     displayName = { S = "Chris" }
     apps = { M = {
       scorchbook = { S = "admin" }

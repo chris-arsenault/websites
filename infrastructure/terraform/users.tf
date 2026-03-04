@@ -8,7 +8,7 @@ resource "random_password" "cognito_chris" {
 
 resource "aws_cognito_user" "chris" {
   user_pool_id   = module.cognito.user_pool_id
-  username       = "chris@chris-arsenault.net"
+  username       = "chris"
   password       = random_password.cognito_chris.result
   message_action = "SUPPRESS"
 

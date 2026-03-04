@@ -2,7 +2,7 @@ import { useState } from "react";
 import { signIn } from "../auth";
 
 export function Login({ onLogin }: Readonly<{ onLogin: () => void }>) {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -11,7 +11,7 @@ export function Login({ onLogin }: Readonly<{ onLogin: () => void }>) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    signIn(email, password)
+    signIn(username, password)
       .then(() => onLogin())
       .catch((err: unknown) => setError((err as Error).message))
       .finally(() => setLoading(false));
@@ -22,10 +22,10 @@ export function Login({ onLogin }: Readonly<{ onLogin: () => void }>) {
       <h2>Admin Login</h2>
       {error && <p className="error">{error}</p>}
       <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        type="text"
+        placeholder="Username or email"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
         required
       />
       <input

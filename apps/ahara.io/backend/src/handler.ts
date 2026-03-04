@@ -57,13 +57,15 @@ const handleGet = async (path: string, cors: Record<string, string>) => {
 const handlePut = async (username: string, event: APIGatewayProxyEventV2, cors: Record<string, string>) => {
   const body = parseBody(event.body, event.isBase64Encoded);
   const password = body.password as string | undefined;
+  const email = body.email as string | undefined;
   const record: UserRecord = {
     username,
-    displayName: (body.displayName as string) ?? username.split("@")[0],
+    email,
+    displayName: (body.displayName as string) ?? username,
     apps: (body.apps as Record<string, string>) ?? {},
   };
   await putUser(record);
-  await ensureCognitoUser(username, password);
+  await ensureCognitoUser(username, password, email);
   return json(200, { data: record }, cors);
 };
 
