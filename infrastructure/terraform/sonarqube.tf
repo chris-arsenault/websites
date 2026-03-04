@@ -159,13 +159,9 @@ data "aws_ami" "al2023" {
 resource "aws_instance" "sonarqube" {
   ami                    = data.aws_ami.al2023.id
   instance_type          = "t3.small"
+  availability_zone      = aws_ebs_volume.sonarqube_data.availability_zone
   iam_instance_profile   = aws_iam_instance_profile.sonarqube.name
   vpc_security_group_ids = [aws_security_group.sonarqube.id]
-
-  root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
-  }
 
   user_data = templatefile("${path.module}/sonarqube-userdata.sh.tftpl", {
     aws_region      = data.aws_region.current.id
@@ -173,6 +169,7 @@ resource "aws_instance" "sonarqube" {
     cognito_pool_id = module.cognito.user_pool_id
     ssm_prefix      = "/websites/sonarqube"
     oidc_plugin_url = "https://github.com/sonar-auth-oidc/sonar-auth-oidc/releases/download/v3.0.0/sonar-auth-oidc-plugin-3.0.0.jar"
+    data_device     = "/dev/xvdf"
   })
 
   tags = { Name = "websites-sonarqube" }
@@ -180,6 +177,21 @@ resource "aws_instance" "sonarqube" {
   lifecycle {
     ignore_changes = [ami]
   }
+}
+
+# --- Data Volume (survives instance replacement) ---
+
+resource "aws_ebs_volume" "sonarqube_data" {
+  availability_zone = "${data.aws_region.current.id}a"
+  size              = 20
+  type              = "gp3"
+  tags              = { Name = "websites-sonarqube-data" }
+}
+
+resource "aws_volume_attachment" "sonarqube_data" {
+  device_name = "/dev/xvdf"
+  volume_id   = aws_ebs_volume.sonarqube_data.id
+  instance_id = aws_instance.sonarqube.id
 }
 
 # --- Networking ---
