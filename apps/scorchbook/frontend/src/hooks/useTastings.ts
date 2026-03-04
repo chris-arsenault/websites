@@ -54,8 +54,8 @@ type MediaData = {
   audioMimeType: string;
 };
 
-const trimFallback = (value: string, fallback: string | undefined) => value.trim() || fallback;
-const numFallback = (value: string, fallback: number | null | undefined) => toNumberOrNull(value) ?? fallback;
+const trimFallback = (value: string, fallback: string) => value.trim() || fallback;
+const numFallback = (value: string, fallback: number | null) => toNumberOrNull(value) ?? fallback;
 
 const buildEditedRecord = (existing: TastingRecord, base: TastingRecord, formData: FormState): TastingRecord => ({
   ...base,

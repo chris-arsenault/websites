@@ -85,14 +85,7 @@ export const createTasting = async (item: TastingRecord): Promise<void> => {
   await docClient.send(command);
 };
 
-export const putTasting = async (item: TastingRecord): Promise<void> => {
-  const command = new PutCommand({
-    TableName: tableName(),
-    Item: item
-  });
-
-  await docClient.send(command);
-};
+export const putTasting = createTasting;
 
 export const getTasting = async (id: string): Promise<TastingRecord | null> => {
   const command = new GetCommand({

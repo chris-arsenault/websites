@@ -7,7 +7,7 @@ export function Login({ onLogin }: Readonly<{ onLogin: () => void }>) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);

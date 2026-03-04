@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type FormEvent, type RefObject } from "react";
+import { useCallback, useEffect, type RefObject, type SubmitEvent } from "react";
 import { useCamera, type CameraControls } from "../hooks/useCamera";
 import { useRecorder, type RecorderControls } from "../hooks/useRecorder";
 import { PepperSelector, ScoreSelector } from "./display";
@@ -46,6 +46,7 @@ function VoiceCapture({ recorder }: Readonly<{ recorder: RecorderControls }>) {
     return (
       <div className="voice-capture">
         <div className="voice-preview">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption -- user-recorded tasting notes, no captions available */}
           <audio controls src={recorder.audioUrl} />
           <button type="button" onClick={recorder.clear}>Remove</button>
         </div>
@@ -291,7 +292,7 @@ export function TastingForm({
     recorder.stop();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleFormSubmit = (event: FormEvent) => {
+  const handleFormSubmit = (event: SubmitEvent) => {
     event.preventDefault();
     onSubmit({
       imageBase64: productCamera.base64,

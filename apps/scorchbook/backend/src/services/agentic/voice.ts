@@ -47,6 +47,7 @@ const pollTranscriptionJob = async (jobName: string): Promise<string> => {
 };
 
 export const transcribeVoice = async (s3Uri: string, mimeType: string): Promise<string> => {
+  // eslint-disable-next-line sonarjs/pseudo-random -- job name uniqueness, not security
   const jobName = `scorchbook-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const startCommand = new StartTranscriptionJobCommand({
     TranscriptionJobName: jobName,

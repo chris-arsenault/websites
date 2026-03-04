@@ -1,3 +1,13 @@
+const toInt = (value: number | string, fallback: number) => {
+  if (typeof value === "number") return value;
+  return value ? parseInt(value, 10) : fallback;
+};
+
+const toFloat = (value: number | string, fallback: number) => {
+  if (typeof value === "number") return value;
+  return value ? parseFloat(value) : fallback;
+};
+
 // Compact Heat Slider (1-5 peppers)
 export const HeatSlider = ({ value, onChange, label }: { value: string; onChange: (val: string) => void; label?: string }) => {
   const numValue = value ? parseInt(value, 10) : 0;
@@ -50,7 +60,7 @@ export const ScoreSlider = ({ value, onChange, label }: { value: string; onChang
 
 // Pepper Selector for forms (1-5 scale)
 export const PepperSelector = ({ value, onChange, label, showLabel = true }: { value: number | string; onChange: (val: string) => void; label?: string; showLabel?: boolean }) => {
-  const numValue = typeof value === "string" ? (value ? parseInt(value, 10) : 0) : value;
+  const numValue = toInt(value, 0);
   return (
     <div className="pepper-selector">
       {showLabel && label && <span className="selector-label">{label}</span>}
@@ -73,7 +83,7 @@ export const PepperSelector = ({ value, onChange, label, showLabel = true }: { v
 
 // Score Selector for forms (0-10 scale)
 export const ScoreSelector = ({ value, onChange, label, showLabel = true }: { value: number | string; onChange: (val: string) => void; label?: string; showLabel?: boolean }) => {
-  const numValue = typeof value === "string" ? (value ? parseFloat(value) : -1) : value;
+  const numValue = toFloat(value, -1);
   return (
     <div className="score-selector">
       {showLabel && label && <span className="selector-label">{label}</span>}

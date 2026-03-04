@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { getSession, signIn, signOut } from "../auth";
 
 export type AuthState = {
@@ -42,7 +42,7 @@ export function useAuth() {
     return () => document.removeEventListener("click", handleClick);
   }, [menuOpen]);
 
-  const handleSignIn = (event: FormEvent<HTMLFormElement>, onError: (msg: string) => void) => {
+  const handleSignIn = (event: SubmitEvent<HTMLFormElement>, onError: (msg: string) => void) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const rawUser = formData.get("username");

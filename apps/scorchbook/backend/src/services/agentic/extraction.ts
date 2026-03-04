@@ -12,7 +12,7 @@ const heatWordMap: Partial<Record<string, number>> = {
 
 const extractHeatRatio = (lower: string): number | undefined => {
   // eslint-disable-next-line sonarjs/slow-regex -- input is pre-normalized short text, no backtracking risk
-  const match = lower.match(/(?:heat|spice) *(?:level)? *[:\-]? *(\d+(?:\.\d+)?) *\/ *(\d+)/);
+  const match = /(?:heat|spice) *(?:level)? *[:\-]? *(\d+(?:\.\d+)?) *\/ *(\d+)/.exec(lower);
   if (!match) {
     return undefined;
   }
@@ -27,7 +27,7 @@ const extractHeatRatio = (lower: string): number | undefined => {
 
 const extractHeatNumeric = (lower: string): number | undefined => {
   // eslint-disable-next-line sonarjs/slow-regex -- input is pre-normalized short text, no backtracking risk
-  const match = lower.match(/(?:heat|spice) *(?:level)? *[:\-]? *(\d+(?:\.\d+)?)/);
+  const match = /(?:heat|spice) *(?:level)? *[:\-]? *(\d+(?:\.\d+)?)/.exec(lower);
   if (!match) {
     return undefined;
   }
@@ -36,7 +36,7 @@ const extractHeatNumeric = (lower: string): number | undefined => {
 };
 
 const extractHeatWord = (lower: string): number | undefined => {
-  const match = lower.match(/(?:heat|spice) *(?:level)? *[:\-]? *([a-z\- ]{3,20})/);
+  const match = /(?:heat|spice) *(?:level)? *[:\-]? *([a-z\- ]{3,20})/.exec(lower);
   if (!match) {
     return undefined;
   }
@@ -54,7 +54,7 @@ const scovilleToScore = (shu: number): number => {
 
 const extractHeatScoville = (lower: string): number | undefined => {
   // eslint-disable-next-line sonarjs/slow-regex -- input is pre-normalized short text, no backtracking risk
-  const match = lower.match(/(\d{1,3}(?:,\d{3})+|\d{4,}) *(?:shu|scoville)/);
+  const match = /(\d{1,3}(?:,\d{3})+|\d{4,}) *(?:shu|scoville)/.exec(lower);
   if (!match) {
     return undefined;
   }

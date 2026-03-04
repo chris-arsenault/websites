@@ -52,7 +52,7 @@ export function UserEditor({ user, onSave, onCancel }: Readonly<Props>) {
   const handleToggle = useCallback((k: string) => setApps((p) => toggleAppKey(p, k)), []);
   const handleRoleChange = useCallback((k: string, r: string) => setApps((p) => ({ ...p, [k]: r })), []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
     onSave({ username, displayName, apps, ...(isNew && password ? { password } : {}) });
   };
