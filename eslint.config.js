@@ -8,6 +8,27 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import sonarjs from "eslint-plugin-sonarjs";
 import prettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
+import maxJsxProps from "./eslint-rules/max-jsx-props.js";
+import noDirectFetch from "./eslint-rules/no-direct-fetch.js";
+import noDirectStoreImport from "./eslint-rules/no-direct-store-import.js";
+import noEscapeHatches from "./eslint-rules/no-escape-hatches.js";
+import noInlineStyles from "./eslint-rules/no-inline-styles.js";
+import noManualAsyncState from "./eslint-rules/no-manual-async-state.js";
+import noManualExpandState from "./eslint-rules/no-manual-expand-state.js";
+import noManualViewHeader from "./eslint-rules/no-manual-view-header.js";
+
+const localPlugin = {
+  rules: {
+    "max-jsx-props": maxJsxProps,
+    "no-direct-fetch": noDirectFetch,
+    "no-direct-store-import": noDirectStoreImport,
+    "no-escape-hatches": noEscapeHatches,
+    "no-inline-styles": noInlineStyles,
+    "no-manual-async-state": noManualAsyncState,
+    "no-manual-expand-state": noManualExpandState,
+    "no-manual-view-header": noManualViewHeader,
+  },
+};
 
 export default tseslint.config(
   {
@@ -125,12 +146,23 @@ export default tseslint.config(
   // Scorchbook frontend — downgraded rules for pre-existing issues
   {
     files: ["apps/scorchbook/frontend/src/**/*.{ts,tsx}"],
+    plugins: {
+      local: localPlugin,
+    },
     rules: {
       "jsx-a11y/click-events-have-key-events": "warn",
       "jsx-a11y/no-static-element-interactions": "warn",
       "jsx-a11y/no-noninteractive-element-interactions": "warn",
       "jsx-a11y/media-has-caption": "warn",
       "jsx-a11y/label-has-associated-control": "warn",
+      "local/max-jsx-props": "warn",
+      "local/no-direct-fetch": "warn",
+      "local/no-direct-store-import": "warn",
+      "local/no-escape-hatches": "warn",
+      "local/no-inline-styles": "warn",
+      "local/no-manual-async-state": "warn",
+      "local/no-manual-expand-state": "warn",
+      "local/no-manual-view-header": "warn",
     },
   },
 

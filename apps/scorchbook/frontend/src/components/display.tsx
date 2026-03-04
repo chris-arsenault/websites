@@ -23,7 +23,7 @@ export const HeatSlider = ({ value, onChange, label }: { value: string; onChange
           onChange={(e) => onChange(e.target.value === "0" ? "" : e.target.value)}
           className="range-input"
         />
-        <div className="slider-fill heat-fill" style={{ width: `${(numValue / 5) * 100}%` }} />
+        <div className="slider-fill heat-fill" style={{ '--fill-width': `${(numValue / 5) * 100}%` } as React.CSSProperties} />
         <div className="slider-peppers">
           {[1, 2, 3, 4, 5].map((level) => (
             <span key={level} className={`slider-pepper ${numValue >= level ? "active" : ""}`}>🌶️</span>
@@ -51,7 +51,7 @@ export const ScoreSlider = ({ value, onChange, label }: { value: string; onChang
           onChange={(e) => onChange(e.target.value === "0" ? "" : e.target.value)}
           className="range-input"
         />
-        <div className="slider-fill score-fill" style={{ width: `${(numValue / 10) * 100}%` }} />
+        <div className="slider-fill score-fill" style={{ '--fill-width': `${(numValue / 10) * 100}%` } as React.CSSProperties} />
       </div>
       <span className="slider-value">{hasValue && numValue > 0 ? `${numValue}+` : "Any"}</span>
     </div>
@@ -120,11 +120,11 @@ export const HeatDisplay = ({ value, max = 5 }: { value: number | null; max?: nu
 // Display score as visual bar
 export const ScoreDisplay = ({ value }: { value: number | null }) => {
   if (value === null) return <span className="score-empty">-</span>;
-  const percentage = (value / 10) * 100;
+  const percentage = `${(value / 10) * 100}%`;
   return (
     <div className="score-display">
       <div className="score-bar">
-        <div className="score-fill" style={{ width: `${percentage}%` }} />
+        <div className="score-fill" style={{ '--fill-width': percentage } as React.CSSProperties} />
       </div>
       <span className="score-value">{value.toFixed(1)}</span>
     </div>

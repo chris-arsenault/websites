@@ -193,10 +193,9 @@ function FormFieldSections({ form, setForm, formProductType }: Readonly<{
   );
 }
 
-function MediaSection({ formMode, mediaExpanded, setMediaExpanded, productCamera, ingredientsCamera, nutritionCamera, productRef, ingredientsRef, nutritionRef, recorder }: Readonly<{
+function MediaSection({ formMode, mediaExpanded, productCamera, ingredientsCamera, nutritionCamera, productRef, ingredientsRef, nutritionRef, recorder }: Readonly<{
   formMode: "add" | "edit";
-  mediaExpanded: boolean;
-  setMediaExpanded: (v: boolean) => void;
+  mediaExpanded: ToggleState;
   productCamera: CameraControls;
   ingredientsCamera: CameraControls;
   nutritionCamera: CameraControls;
@@ -210,12 +209,12 @@ function MediaSection({ formMode, mediaExpanded, setMediaExpanded, productCamera
       <div className="form-section-header">
         <h3>📷 Photos</h3>
         {formMode === "edit" && (
-          <button type="button" className="form-section-toggle" onClick={() => setMediaExpanded(!mediaExpanded)}>
-            {mediaExpanded ? "Hide" : "Edit"}
+          <button type="button" className="form-section-toggle" onClick={() => mediaExpanded.set(!mediaExpanded.value)}>
+            {mediaExpanded.value ? "Hide" : "Edit"}
           </button>
         )}
       </div>
-      {(formMode === "add" || mediaExpanded) && (
+      {(formMode === "add" || mediaExpanded.value) && (
         <div className="media-grid">
           <MediaSlot label="Product" icon="📷" camera={productCamera} videoRef={productRef} />
           <MediaSlot label="Ingredients" icon="📋" camera={ingredientsCamera} videoRef={ingredientsRef} small />
@@ -233,14 +232,17 @@ const hasAnyMedia = (cameras: CameraControls[], audioBase64: string) =>
 const resolveProductType = (record: TastingRecord | null, formMode: string, productType: ProductType | "all") =>
   record?.productType ?? (formMode === "add" ? productType : "sauce");
 
+type ToggleState = {
+  value: boolean;
+  set: (v: boolean) => void;
+};
+
 type TastingFormProps = {
   formMode: "add" | "edit";
   form: FormState;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
-  showManualFields: boolean;
-  setShowManualFields: (v: boolean) => void;
-  mediaExpanded: boolean;
-  setMediaExpanded: (v: boolean) => void;
+  manualFields: ToggleState;
+  mediaExpanded: ToggleState;
   submitStatus: "idle" | "saving" | "saved";
   viewingRecord: TastingRecord | null;
   productType: ProductType | "all";
@@ -262,10 +264,8 @@ export function TastingForm({
   formMode,
   form,
   setForm,
-  showManualFields,
-  setShowManualFields,
+  manualFields,
   mediaExpanded,
-  setMediaExpanded,
   submitStatus,
   viewingRecord,
   productType,
@@ -306,7 +306,7 @@ export function TastingForm({
     });
   };
 
-  const showFields = formMode === "edit" || showManualFields;
+  const showFields = formMode === "edit" || manualFields.value;
   const formProductType = resolveProductType(viewingRecord, formMode, productType);
   const hasMedia = hasAnyMedia([productCamera, ingredientsCamera, nutritionCamera], recorder.audioBase64);
   const canSubmit = submitStatus !== "saving" && (showFields || hasMedia);
@@ -321,14 +321,14 @@ export function TastingForm({
 
         <form className="form-body" onSubmit={handleFormSubmit}>
           <MediaSection
-            formMode={formMode} mediaExpanded={mediaExpanded} setMediaExpanded={setMediaExpanded}
+            formMode={formMode} mediaExpanded={mediaExpanded}
             productCamera={productCamera} ingredientsCamera={ingredientsCamera} nutritionCamera={nutritionCamera}
             productRef={productRef} ingredientsRef={ingredientsRef} nutritionRef={nutritionRef}
             recorder={recorder}
           />
           {showFields && <FormFieldSections form={form} setForm={setForm} formProductType={formProductType} />}
           {!showFields && (
-            <button type="button" className="form-toggle-manual" onClick={() => setShowManualFields(true)}>
+            <button type="button" className="form-toggle-manual" onClick={() => manualFields.set(true)}>
               + Add details manually
             </button>
           )}

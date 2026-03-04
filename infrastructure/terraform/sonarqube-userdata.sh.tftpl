@@ -1,0 +1,185 @@
+#!/bin/bash
+set -euo pipefail
+exec > /var/log/sonarqube-setup.log 2>&1
+
+AWS_REGION="${aws_region}"
+DOMAIN="${domain}"
+COGNITO_POOL_ID="${cognito_pool_id}"
+SSM_PREFIX="${ssm_prefix}"
+OIDC_PLUGIN_URL="${oidc_plugin_url}"
+INSTALL_DIR="/opt/sonarqube"
+
+# --- Helper ---
+ssm_get() {
+  aws ssm get-parameter --region "$AWS_REGION" --name "$SSM_PREFIX/$1" --with-decryption --query Parameter.Value --output text
+}
+
+ssm_put() {
+  aws ssm put-parameter --region "$AWS_REGION" --name "$SSM_PREFIX/$1" --type SecureString --value "$2" --overwrite
+}
+
+# --- Install Docker ---
+dnf install -y docker
+systemctl enable --now docker
+usermod -aG docker ec2-user
+
+# Install Docker Compose plugin
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# --- Sysctl for Elasticsearch ---
+sysctl -w vm.max_map_count=524288
+echo "vm.max_map_count=524288" >> /etc/sysctl.conf
+
+# --- Read secrets from SSM ---
+DB_PASSWORD=$(ssm_get db-password)
+ADMIN_PASSWORD=$(ssm_get admin-password)
+COGNITO_CLIENT_ID=$(ssm_get cognito-client-id)
+COGNITO_CLIENT_SECRET=$(ssm_get cognito-client-secret)
+
+# --- Write config files ---
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+
+cat > Dockerfile <<'DOCKERFILE'
+FROM sonarqube:community
+ADD ${OIDC_PLUGIN_URL} /opt/sonarqube/extensions/plugins/sonar-auth-oidc-plugin.jar
+DOCKERFILE
+# Re-write with actual URL (tftpl doesn't expand inside heredoc)
+cat > Dockerfile <<EOF
+FROM sonarqube:community
+ADD $OIDC_PLUGIN_URL /opt/sonarqube/extensions/plugins/sonar-auth-oidc-plugin.jar
+EOF
+
+cat > sonar.properties <<EOF
+sonar.core.serverBaseURL=https://$DOMAIN
+sonar.auth.oidc.enabled=true
+sonar.auth.oidc.issuerUri=https://cognito-idp.$AWS_REGION.amazonaws.com/$COGNITO_POOL_ID
+sonar.auth.oidc.clientId.secured=$COGNITO_CLIENT_ID
+sonar.auth.oidc.clientSecret.secured=$COGNITO_CLIENT_SECRET
+sonar.auth.oidc.scopes=openid email profile
+sonar.auth.oidc.allowUsersToSignUp=true
+sonar.auth.oidc.loginButtonText=Log in with Cognito
+sonar.auth.oidc.loginStrategy=Email
+sonar.forceAuthentication=true
+EOF
+
+cat > Caddyfile <<EOF
+$DOMAIN {
+    reverse_proxy sonarqube:9000
+}
+EOF
+
+cat > docker-compose.yml <<EOF
+services:
+  caddy:
+    image: caddy:2
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - sonarqube
+    restart: unless-stopped
+
+  sonarqube:
+    build: .
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: $DB_PASSWORD
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - ./sonar.properties:/opt/sonarqube/conf/sonar.properties:ro
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: $DB_PASSWORD
+      POSTGRES_DB: sonar
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  postgresql_data:
+EOF
+
+# --- Start services ---
+docker compose build
+docker compose up -d
+
+# --- Wait for SonarQube to be ready ---
+echo "Waiting for SonarQube to start..."
+for i in $(seq 1 60); do
+  STATUS=$(curl -sf http://localhost:9000/api/system/status 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || true)
+  if [ "$STATUS" = "UP" ]; then
+    echo "SonarQube is up after $i attempts"
+    break
+  fi
+  echo "Attempt $i: status=$STATUS"
+  sleep 10
+done
+
+if [ "$STATUS" != "UP" ]; then
+  echo "ERROR: SonarQube did not start within 10 minutes"
+  exit 1
+fi
+
+# --- Change admin password ---
+curl -sf -u admin:admin -X POST \
+  "http://localhost:9000/api/users/change_password" \
+  -d "login=admin&previousPassword=admin&password=$ADMIN_PASSWORD"
+echo "Admin password changed"
+
+# --- Create project ---
+curl -sf -u "admin:$ADMIN_PASSWORD" -X POST \
+  "http://localhost:9000/api/projects/create?name=websites&project=websites" || true
+echo "Project created"
+
+# --- Generate CI token ---
+TOKEN_RESPONSE=$(curl -sf -u "admin:$ADMIN_PASSWORD" -X POST \
+  "http://localhost:9000/api/user_tokens/generate?name=ci&type=PROJECT_ANALYSIS_TOKEN&projectKey=websites")
+CI_TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+if [ -n "$CI_TOKEN" ]; then
+  ssm_put ci-token "$CI_TOKEN"
+  echo "CI token stored in SSM"
+else
+  echo "WARNING: Failed to generate CI token"
+fi
+
+# --- Systemd service for auto-start ---
+cat > /etc/systemd/system/sonarqube.service <<EOF
+[Unit]
+Description=SonarQube Docker Compose
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=$INSTALL_DIR
+ExecStart=/usr/local/lib/docker/cli-plugins/docker-compose up -d
+ExecStop=/usr/local/lib/docker/cli-plugins/docker-compose down
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable sonarqube.service
+
+echo "SonarQube setup complete"

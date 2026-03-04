@@ -83,9 +83,10 @@ resource "aws_lambda_permission" "auth_trigger_cognito" {
 resource "aws_ssm_parameter" "auth_client_map" {
   name = "/websites/auth-trigger/client-map"
   type = "String"
-  value = jsonencode({
-    for key, id in module.cognito.client_ids : id => key
-  })
+  value = jsonencode(merge(
+    { for key, id in module.cognito.client_ids : id => key },
+    { (aws_cognito_user_pool_client.sonarqube.id) = "sonarqube" }
+  ))
 
   tags = {
     Project   = "Websites"
