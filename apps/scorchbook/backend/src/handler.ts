@@ -4,25 +4,25 @@ import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { createTasting, deleteTasting, getTasting, listTastings, putTasting } from "./services/dynamo";
 import { verifyAuth } from "./services/auth";
 import { validateCreateTasting, validateUpdateTastingMedia } from "./services/validation";
-import { downloadMediaBase64, parseBase64Data, uploadMedia } from "./services/media";
-import {
-  extractVoiceMetrics,
-  formatTastingNotes,
-  runIngredientsExtraction,
-  runImageExtraction,
-  runNutritionFactsExtraction,
-  transcribeVoice
-} from "./services/agentic";
+import { parseBase64Data, uploadMedia } from "./services/media";
 import { sanitizeOptional } from "./utils/sanitize";
 import { jsonResponse, emptyResponse } from "./utils/http";
 import { logError, logInfo, logWarn } from "./utils/logger";
-import type { CreateTastingInput, ProcessingStatus, TastingRecord, UpdateTastingMediaInput } from "./types";
+import { isProcessEvent, processTastingAsync, updateRecordStatus } from "./processing";
+import type { ProcessEvent } from "./processing";
+import type { CreateTastingInput, TastingRecord, UpdateTastingMediaInput } from "./types";
+
+const resolveAllowOrigin = (allowList: string[], origin?: string): string => {
+  if (allowList.includes("*")) return "*";
+  if (origin && allowList.includes(origin)) return origin;
+  return "";
+};
 
 const getCorsHeaders = (origin?: string) => {
   const allowList = (process.env.ALLOWED_ORIGINS ?? "*").split(",").map((item) => item.trim());
-  const allowOrigin = allowList.includes("*") ? "*" : allowList.includes(origin ?? "") ? origin ?? "" : "";
+  const allowed = resolveAllowOrigin(allowList, origin);
   return {
-    "Access-Control-Allow-Origin": allowOrigin || allowList[0] || "*",
+    "Access-Control-Allow-Origin": allowed || allowList[0] || "*",
     "Access-Control-Allow-Headers": "authorization,content-type",
     "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS"
   };
@@ -30,136 +30,20 @@ const getCorsHeaders = (origin?: string) => {
 
 const normalizeString = (value?: string) => (value ? sanitizeOptional(value) : "");
 const normalizeMimeType = (value?: string) => (value ? value.split(";")[0].trim() : value);
+
 const inferMimeTypeFromKey = (key?: string): string | undefined => {
-  if (!key) {
-    return undefined;
-  }
+  if (!key) return undefined;
   const ext = key.split(".").pop()?.toLowerCase();
-  if (!ext) {
-    return undefined;
-  }
+  if (!ext) return undefined;
   const map: Record<string, string> = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    webp: "image/webp",
-    gif: "image/gif",
-    mp3: "audio/mpeg",
-    wav: "audio/wav",
-    ogg: "audio/ogg",
-    webm: "audio/webm",
-    m4a: "audio/mp4",
-    mp4: "audio/mp4",
-    flac: "audio/flac"
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif",
+    mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", webm: "audio/webm",
+    m4a: "audio/mp4", mp4: "audio/mp4", flac: "audio/flac"
   };
   return map[ext];
 };
 
-const applyEnrichment = (
-  base: TastingRecord,
-  enrichment: Partial<TastingRecord>,
-  options?: { overwriteKeys?: Array<keyof TastingRecord> }
-) => {
-  const overwriteKeys = new Set(options?.overwriteKeys ?? []);
-  const shouldApplyCandidate = (candidate: unknown) => {
-    if (candidate === undefined || candidate === null) {
-      return false;
-    }
-    if (typeof candidate === "string") {
-      return candidate.trim().length > 0;
-    }
-    return true;
-  };
-  (Object.keys(enrichment) as (keyof TastingRecord)[]).forEach((key) => {
-    const candidate = enrichment[key];
-    const current = base[key];
-    if (!shouldApplyCandidate(candidate)) {
-      return;
-    }
-    if (overwriteKeys.has(key)) {
-      base[key] = candidate as never;
-      return;
-    }
-    if (typeof current === "string" && current.trim().length === 0) {
-      base[key] = candidate as never;
-      return;
-    }
-    if (current === null || current === undefined) {
-      base[key] = candidate as never;
-    }
-  });
-};
-
-const stripAudioFields = (record: TastingRecord) => {
-  const { voiceKey: _voiceKey, voiceTranscript: _voiceTranscript, ...rest } = record;
-  return rest;
-};
-
-type ProcessEvent = {
-  action: "process";
-  recordId: string;
-  imageKey?: string;
-  ingredientsImageKey?: string;
-  nutritionImageKey?: string;
-  voiceKey?: string;
-  imageMimeType?: string;
-  ingredientsImageMimeType?: string;
-  nutritionImageMimeType?: string;
-  voiceMimeType?: string;
-  forceVoice?: boolean;
-};
-
 const lambdaClient = new LambdaClient({});
-
-const isProcessEvent = (event: unknown): event is ProcessEvent => {
-  return Boolean(event && typeof event === "object" && (event as ProcessEvent).action === "process");
-};
-
-const parseJsonBody = <T,>(body: string | undefined, isBase64Encoded?: boolean): T => {
-  if (!body) {
-    throw new Error("Missing body");
-  }
-  const raw = isBase64Encoded ? Buffer.from(body, "base64").toString("utf8") : body;
-  return JSON.parse(raw) as T;
-};
-
-const buildRecord = (input: CreateTastingInput, nowIso: string, createdBy?: string): TastingRecord => {
-  return {
-    id: randomUUID(),
-    createdAt: nowIso,
-    updatedAt: nowIso,
-    status: "pending",
-    name: normalizeString(input.name),
-    maker: normalizeString(input.maker),
-    date: input.date ?? nowIso.slice(0, 10),
-    score: input.score ?? null,
-    style: normalizeString(input.style),
-    heatUser: input.heatUser ?? null,
-    heatVendor: input.heatVendor ?? null,
-    refreshing: input.refreshing ?? null,
-    sweet: input.sweet ?? null,
-    tastingNotesUser: normalizeString(input.tastingNotesUser),
-    tastingNotesVendor: normalizeString(input.tastingNotesVendor),
-    productUrl: normalizeString(input.productUrl),
-    createdBy
-  };
-};
-
-const updateRecordStatus = async (
-  record: TastingRecord,
-  status: ProcessingStatus,
-  processingError?: string
-) => {
-  record.status = status;
-  record.updatedAt = new Date().toISOString();
-  if (status === "error") {
-    record.processingError = processingError ?? record.processingError ?? "Unknown processing error";
-  } else {
-    record.processingError = undefined;
-  }
-  await putTasting(record);
-  logInfo("tasting.status.updated", { recordId: record.id, status });
-};
 
 const invokeAsyncProcessing = async (payload: ProcessEvent) => {
   const functionName = process.env.AWS_LAMBDA_FUNCTION_NAME;
@@ -176,103 +60,259 @@ const invokeAsyncProcessing = async (payload: ProcessEvent) => {
   logInfo("agent.process.queued", { recordId: payload.recordId });
 };
 
-const processTastingAsync = async (payload: ProcessEvent) => {
-  const record = await getTasting(payload.recordId);
-  if (!record) {
-    logWarn("agent.process.missing_record", { recordId: payload.recordId });
-    return;
-  }
+const parseJsonBody = <T,>(body: string | undefined, isBase64Encoded?: boolean): T => {
+  if (!body) throw new Error("Missing body");
+  const raw = isBase64Encoded ? Buffer.from(body, "base64").toString("utf8") : body;
+  return JSON.parse(raw) as T;
+};
 
+const buildRecord = (input: CreateTastingInput, nowIso: string, createdBy?: string): TastingRecord => ({
+  id: randomUUID(),
+  createdAt: nowIso,
+  updatedAt: nowIso,
+  status: "pending",
+  name: normalizeString(input.name),
+  maker: normalizeString(input.maker),
+  date: input.date ?? nowIso.slice(0, 10),
+  score: input.score ?? null,
+  style: normalizeString(input.style),
+  heatUser: input.heatUser ?? null,
+  heatVendor: input.heatVendor ?? null,
+  refreshing: input.refreshing ?? null,
+  sweet: input.sweet ?? null,
+  tastingNotesUser: normalizeString(input.tastingNotesUser),
+  tastingNotesVendor: normalizeString(input.tastingNotesVendor),
+  productUrl: normalizeString(input.productUrl),
+  createdBy
+});
+
+type MediaUploadResult = { url?: string; key?: string };
+
+const uploadMediaPayload = async (
+  payload: ReturnType<typeof parseBase64Data>,
+  prefix: string,
+  recordId: string,
+  defaultExt: string
+): Promise<MediaUploadResult> => {
+  if (!payload) return {};
+  const ext = payload.contentType.split("/")[1] ?? defaultExt;
+  const key = `${prefix}/${recordId}-${Date.now()}.${ext}`;
+  const url = await uploadMedia(key, payload);
+  return { url, key };
+};
+
+const stripAudioFields = (record: TastingRecord): Omit<TastingRecord, "voiceKey" | "voiceTranscript"> => {
+  const result = { ...record };
+  delete (result as Partial<TastingRecord>).voiceKey;
+  delete (result as Partial<TastingRecord>).voiceTranscript;
+  return result;
+};
+
+// --- Route handlers ---
+
+const optionalNumber = (value?: string): number | undefined =>
+  value ? Number(value) : undefined;
+
+const parseListFilters = (params?: Record<string, string | undefined>) => ({
+  name: params?.name,
+  style: params?.style,
+  minScore: optionalNumber(params?.minScore),
+  maxScore: optionalNumber(params?.maxScore),
+  minHeat: optionalNumber(params?.minHeat),
+  maxHeat: optionalNumber(params?.maxHeat),
+  date: params?.date
+});
+
+const handleListTastings = async (event: APIGatewayProxyEventV2, corsHeaders: Record<string, string>) => {
+  const filters = parseListFilters(event.queryStringParameters);
+  const tastings = await listTastings(filters);
+  return jsonResponse(200, { data: tastings.map(stripAudioFields) }, corsHeaders);
+};
+
+const safeInvokeProcessing = async (record: TastingRecord, payload: ProcessEvent) => {
   try {
-    if (payload.imageKey) {
-      const media = await downloadMediaBase64(payload.imageKey);
-      const imageMimeType = media.contentType ?? payload.imageMimeType ?? "image/jpeg";
-      const imageExtraction = await runImageExtraction(media.base64, imageMimeType);
-      applyEnrichment(record, {
-        productType: imageExtraction.productType,
-        name: imageExtraction.name,
-        maker: imageExtraction.maker,
-        style: imageExtraction.style
-      });
-      await updateRecordStatus(record, "image_extracted");
-    }
-
-    if (payload.ingredientsImageKey) {
-      const media = await downloadMediaBase64(payload.ingredientsImageKey);
-      const ingredientsImageMimeType = media.contentType ?? payload.ingredientsImageMimeType ?? "image/jpeg";
-      const ingredientsExtraction = await runIngredientsExtraction(media.base64, ingredientsImageMimeType);
-      applyEnrichment(record, {
-        ingredients: ingredientsExtraction.ingredients
-      });
-      logInfo("agent.ingredients.complete", {
-        recordId: record.id,
-        ingredientCount: ingredientsExtraction.ingredients?.length ?? 0
-      });
-      await updateRecordStatus(record, "ingredients_extracted");
-    }
-
-    if (payload.nutritionImageKey) {
-      const media = await downloadMediaBase64(payload.nutritionImageKey);
-      const nutritionImageMimeType = media.contentType ?? payload.nutritionImageMimeType ?? "image/jpeg";
-      const nutritionExtraction = await runNutritionFactsExtraction(media.base64, nutritionImageMimeType);
-      applyEnrichment(record, {
-        nutritionFacts: nutritionExtraction.nutritionFacts
-      });
-      logInfo("agent.nutrition.complete", {
-        recordId: record.id,
-        hasNutrition: !!nutritionExtraction.nutritionFacts
-      });
-      await updateRecordStatus(record, "nutrition_extracted");
-    }
-
-    if (payload.voiceKey) {
-      const bucket = process.env.MEDIA_BUCKET;
-      if (!bucket) {
-        throw new Error("MEDIA_BUCKET env var is required for transcription");
-      }
-      const voiceS3Uri = `s3://${bucket}/${payload.voiceKey}`;
-      const transcript = await transcribeVoice(voiceS3Uri, payload.voiceMimeType ?? "audio/webm");
-      applyEnrichment(record, { voiceTranscript: transcript }, {
-        overwriteKeys: payload.forceVoice ? ["voiceTranscript"] : []
-      });
-      await updateRecordStatus(record, "voice_transcribed");
-
-      const metrics = await extractVoiceMetrics(transcript);
-      applyEnrichment(record, {
-        score: metrics.score ?? null,
-        heatUser: metrics.heatUser ?? null
-      }, {
-        overwriteKeys: payload.forceVoice ? ["score", "heatUser"] : []
-      });
-      await updateRecordStatus(record, "voice_extracted");
-
-      const formattedNotes = await formatTastingNotes(transcript);
-      const priorNotes = record.tastingNotesUser;
-      if (formattedNotes.notes) {
-        applyEnrichment(record, { tastingNotesUser: formattedNotes.notes }, {
-          overwriteKeys: payload.forceVoice ? ["tastingNotesUser"] : []
-        });
-      }
-      if (
-        formattedNotes.source === "fallback" &&
-        (payload.forceVoice || !priorNotes || priorNotes.trim().length === 0)
-      ) {
-        record.needsAttention = true;
-        record.attentionReason = "Notes fallback used";
-        logWarn("agent.notes.fallback", { recordId: record.id });
-      } else if (formattedNotes.source === "llm" && record.attentionReason === "Notes fallback used") {
-        record.needsAttention = false;
-        record.attentionReason = undefined;
-      }
-      await updateRecordStatus(record, "notes_formatted");
-    }
-
-    await updateRecordStatus(record, "complete");
+    await invokeAsyncProcessing(payload);
   } catch (error) {
     const message = (error as Error).message;
     await updateRecordStatus(record, "error", message);
-    logError("agent.process.failed", { recordId: payload.recordId, error: message });
+    logWarn("agent.process.invoke.failed", { recordId: record.id, error: message });
   }
+};
+
+const getAuthHeader = (headers: APIGatewayProxyEventV2["headers"]): string | undefined =>
+  headers.authorization ?? headers.Authorization;
+
+const handleCreateTasting = async (event: APIGatewayProxyEventV2, corsHeaders: Record<string, string>) => {
+  const user = await verifyAuth(getAuthHeader(event.headers));
+  const payload = parseJsonBody<CreateTastingInput>(event.body, event.isBase64Encoded);
+  const parsed = validateCreateTasting(payload);
+  const record = buildRecord(parsed, new Date().toISOString(), user.sub);
+
+  const imagePayload = parseBase64Data(parsed.imageBase64, parsed.imageMimeType);
+  const ingredientsPayload = parseBase64Data(parsed.ingredientsImageBase64, parsed.ingredientsImageMimeType);
+  const nutritionPayload = parseBase64Data(parsed.nutritionImageBase64, parsed.nutritionImageMimeType);
+  const voicePayload = parseBase64Data(parsed.voiceBase64, parsed.voiceMimeType);
+
+  const image = await uploadMediaPayload(imagePayload, "images", record.id, "jpg");
+  const ingredients = await uploadMediaPayload(ingredientsPayload, "images", `${record.id}-ingredients`, "jpg");
+  const nutrition = await uploadMediaPayload(nutritionPayload, "images", `${record.id}-nutrition`, "jpg");
+  const voice = await uploadMediaPayload(voicePayload, "voice", record.id, "webm");
+  if (voice.url) logInfo("voice.uploaded", { voiceUrl: voice.url });
+
+  record.imageUrl = image.url;
+  record.imageKey = image.key;
+  record.ingredientsImageUrl = ingredients.url;
+  record.ingredientsImageKey = ingredients.key;
+  record.nutritionImageUrl = nutrition.url;
+  record.nutritionImageKey = nutrition.key;
+  record.voiceKey = voice.key;
+
+  await createTasting(record);
+  await safeInvokeProcessing(record, {
+    action: "process",
+    recordId: record.id,
+    imageKey: image.key,
+    ingredientsImageKey: ingredients.key,
+    nutritionImageKey: nutrition.key,
+    voiceKey: voice.key,
+    imageMimeType: normalizeMimeType(imagePayload?.contentType ?? parsed.imageMimeType),
+    ingredientsImageMimeType: normalizeMimeType(ingredientsPayload?.contentType ?? parsed.ingredientsImageMimeType),
+    nutritionImageMimeType: normalizeMimeType(nutritionPayload?.contentType ?? parsed.nutritionImageMimeType),
+    voiceMimeType: normalizeMimeType(voicePayload?.contentType ?? parsed.voiceMimeType)
+  });
+  return emptyResponse(204, corsHeaders);
+};
+
+type OwnedRecordResult = { record: TastingRecord } | { error: APIGatewayProxyResultV2 };
+
+const getOwnedRecord = async (
+  event: APIGatewayProxyEventV2,
+  recordId: string,
+  corsHeaders: Record<string, string>
+): Promise<OwnedRecordResult> => {
+  const user = await verifyAuth(getAuthHeader(event.headers));
+  const record = await getTasting(recordId);
+  if (!record) return { error: jsonResponse(404, { message: "Tasting not found" }, corsHeaders) };
+  if (record.createdBy && record.createdBy !== user.sub) {
+    return { error: jsonResponse(403, { message: "Forbidden" }, corsHeaders) };
+  }
+  return { record };
+};
+
+const handleUpdateMedia = async (
+  event: APIGatewayProxyEventV2,
+  corsHeaders: Record<string, string>,
+  recordId: string
+) => {
+  const lookup = await getOwnedRecord(event, recordId, corsHeaders);
+  if ("error" in lookup) return lookup.error;
+  const record = lookup.record;
+
+  const payload = parseJsonBody<UpdateTastingMediaInput>(event.body, event.isBase64Encoded);
+  const parsed = validateUpdateTastingMedia(payload);
+  const imagePayload = parseBase64Data(parsed.imageBase64, parsed.imageMimeType);
+  const ingredientsPayload = parseBase64Data(parsed.ingredientsImageBase64, parsed.ingredientsImageMimeType);
+  const nutritionPayload = parseBase64Data(parsed.nutritionImageBase64, parsed.nutritionImageMimeType);
+
+  if (!imagePayload && !ingredientsPayload && !nutritionPayload) {
+    return jsonResponse(400, { message: "No media provided" }, corsHeaders);
+  }
+
+  const image = await uploadMediaPayload(imagePayload, "images", record.id, "jpg");
+  const ingredients = await uploadMediaPayload(ingredientsPayload, "images", `${record.id}-ingredients`, "jpg");
+  const nutrition = await uploadMediaPayload(nutritionPayload, "images", `${record.id}-nutrition`, "jpg");
+
+  if (image.key) { record.imageKey = image.key; record.imageUrl = image.url; }
+  if (ingredients.key) { record.ingredientsImageKey = ingredients.key; record.ingredientsImageUrl = ingredients.url; }
+  if (nutrition.key) { record.nutritionImageKey = nutrition.key; record.nutritionImageUrl = nutrition.url; }
+
+  record.updatedAt = new Date().toISOString();
+  await putTasting(record);
+  return jsonResponse(200, { data: stripAudioFields(record) }, corsHeaders);
+};
+
+const handleDeleteTasting = async (
+  event: APIGatewayProxyEventV2,
+  corsHeaders: Record<string, string>,
+  recordId: string
+) => {
+  const lookup = await getOwnedRecord(event, recordId, corsHeaders);
+  if ("error" in lookup) return lookup.error;
+  const record = lookup.record;
+  await deleteTasting(record.id);
+  logInfo("tasting.deleted", { recordId: record.id });
+  return emptyResponse(204, corsHeaders);
+};
+
+const hasAnyMediaKey = (record: TastingRecord): boolean =>
+  Boolean(record.imageKey || record.ingredientsImageKey || record.nutritionImageKey || record.voiceKey);
+
+const handleRerunProcessing = async (
+  event: APIGatewayProxyEventV2,
+  corsHeaders: Record<string, string>,
+  recordId: string
+) => {
+  const lookup = await getOwnedRecord(event, recordId, corsHeaders);
+  if ("error" in lookup) return lookup.error;
+  const record = lookup.record;
+  if (!hasAnyMediaKey(record)) {
+    return jsonResponse(400, { message: "No media available to process" }, corsHeaders);
+  }
+
+  await updateRecordStatus(record, "pending");
+  await safeInvokeProcessing(record, {
+    action: "process",
+    recordId: record.id,
+    imageKey: record.imageKey,
+    ingredientsImageKey: record.ingredientsImageKey,
+    nutritionImageKey: record.nutritionImageKey,
+    voiceKey: record.voiceKey,
+    imageMimeType: normalizeMimeType(inferMimeTypeFromKey(record.imageKey)),
+    ingredientsImageMimeType: normalizeMimeType(inferMimeTypeFromKey(record.ingredientsImageKey)),
+    nutritionImageMimeType: normalizeMimeType(inferMimeTypeFromKey(record.nutritionImageKey)),
+    voiceMimeType: normalizeMimeType(inferMimeTypeFromKey(record.voiceKey)),
+    forceVoice: true
+  });
+  return emptyResponse(204, corsHeaders);
+};
+
+// --- Router ---
+
+const extractIdFromPath = (path: string, pattern: RegExp): string | null => {
+  const match = pattern.exec(path);
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+const routePostRequest = async (
+  event: APIGatewayProxyEventV2,
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResultV2 | null> => {
+  if (event.rawPath === "/tastings") return handleCreateTasting(event, corsHeaders);
+  const mediaId = extractIdFromPath(event.rawPath, /^\/tastings\/([^/]+)\/media$/);
+  if (mediaId) return handleUpdateMedia(event, corsHeaders, mediaId);
+  const rerunId = extractIdFromPath(event.rawPath, /^\/tastings\/([^/]+)\/rerun$/);
+  if (rerunId) return handleRerunProcessing(event, corsHeaders, rerunId);
+  return null;
+};
+
+const routeRequest = async (
+  event: APIGatewayProxyEventV2,
+  corsHeaders: Record<string, string>
+): Promise<APIGatewayProxyResultV2> => {
+  const method = event.requestContext.http.method.toUpperCase();
+
+  if (method === "GET" && event.rawPath === "/tastings") {
+    return handleListTastings(event, corsHeaders);
+  }
+  if (method === "POST") {
+    const result = await routePostRequest(event, corsHeaders);
+    if (result) return result;
+  }
+  if (method === "DELETE") {
+    const deleteId = extractIdFromPath(event.rawPath, /^\/tastings\/([^/]+)$/);
+    if (deleteId) return handleDeleteTasting(event, corsHeaders, deleteId);
+  }
+  return jsonResponse(404, { message: "Not found" }, corsHeaders);
 };
 
 export const handler = async (
@@ -283,226 +323,13 @@ export const handler = async (
     return { statusCode: 204 };
   }
 
-  const method = event.requestContext.http.method.toUpperCase();
-  const path = event.rawPath;
   const corsHeaders = getCorsHeaders(event.headers.origin ?? event.headers.Origin);
-
-  if (method === "OPTIONS") {
+  if (event.requestContext.http.method.toUpperCase() === "OPTIONS") {
     return emptyResponse(204, corsHeaders);
   }
 
   try {
-    if (method === "GET" && path === "/tastings") {
-      const filters = {
-        name: event.queryStringParameters?.name,
-        style: event.queryStringParameters?.style,
-        minScore: event.queryStringParameters?.minScore ? Number(event.queryStringParameters?.minScore) : undefined,
-        maxScore: event.queryStringParameters?.maxScore ? Number(event.queryStringParameters?.maxScore) : undefined,
-        minHeat: event.queryStringParameters?.minHeat ? Number(event.queryStringParameters?.minHeat) : undefined,
-        maxHeat: event.queryStringParameters?.maxHeat ? Number(event.queryStringParameters?.maxHeat) : undefined,
-        date: event.queryStringParameters?.date
-      };
-      const tastings = await listTastings(filters);
-      return jsonResponse(200, { data: tastings.map(stripAudioFields) }, corsHeaders);
-    }
-
-    if (method === "POST" && path === "/tastings") {
-      const user = await verifyAuth(event.headers.authorization ?? event.headers.Authorization);
-      const payload = parseJsonBody<CreateTastingInput>(event.body, event.isBase64Encoded);
-      const parsed = validateCreateTasting(payload);
-
-      const nowIso = new Date().toISOString();
-      const record = buildRecord(parsed, nowIso, user.sub);
-
-      const imagePayload = parseBase64Data(parsed.imageBase64, parsed.imageMimeType);
-      const ingredientsImagePayload = parseBase64Data(parsed.ingredientsImageBase64, parsed.ingredientsImageMimeType);
-      const nutritionImagePayload = parseBase64Data(parsed.nutritionImageBase64, parsed.nutritionImageMimeType);
-      const voicePayload = parseBase64Data(parsed.voiceBase64, parsed.voiceMimeType);
-      const agentImageMimeType = normalizeMimeType(imagePayload?.contentType ?? parsed.imageMimeType);
-      const agentIngredientsImageMimeType = normalizeMimeType(
-        ingredientsImagePayload?.contentType ?? parsed.ingredientsImageMimeType
-      );
-      const agentNutritionImageMimeType = normalizeMimeType(
-        nutritionImagePayload?.contentType ?? parsed.nutritionImageMimeType
-      );
-      const agentVoiceMimeType = normalizeMimeType(voicePayload?.contentType ?? parsed.voiceMimeType);
-
-      let imageUrl: string | undefined;
-      let imageKey: string | undefined;
-      let ingredientsImageUrl: string | undefined;
-      let ingredientsImageKey: string | undefined;
-      let nutritionImageUrl: string | undefined;
-      let nutritionImageKey: string | undefined;
-      let voiceKey: string | undefined;
-
-      if (imagePayload) {
-        const ext = imagePayload.contentType.split("/")[1] ?? "jpg";
-        imageKey = `images/${record.id}-${Date.now()}.${ext}`;
-        imageUrl = await uploadMedia(imageKey, imagePayload);
-      }
-
-      if (ingredientsImagePayload) {
-        const ext = ingredientsImagePayload.contentType.split("/")[1] ?? "jpg";
-        ingredientsImageKey = `images/${record.id}-ingredients-${Date.now()}.${ext}`;
-        ingredientsImageUrl = await uploadMedia(ingredientsImageKey, ingredientsImagePayload);
-      }
-
-      if (nutritionImagePayload) {
-        const ext = nutritionImagePayload.contentType.split("/")[1] ?? "jpg";
-        nutritionImageKey = `images/${record.id}-nutrition-${Date.now()}.${ext}`;
-        nutritionImageUrl = await uploadMedia(nutritionImageKey, nutritionImagePayload);
-      }
-
-      if (voicePayload) {
-        const ext = voicePayload.contentType.split("/")[1] ?? "webm";
-        voiceKey = `voice/${record.id}-${Date.now()}.${ext}`;
-        const voiceUrl = await uploadMedia(voiceKey, voicePayload);
-        logInfo("voice.uploaded", { voiceUrl });
-      }
-
-      record.imageUrl = imageUrl;
-      record.imageKey = imageKey;
-      record.ingredientsImageUrl = ingredientsImageUrl;
-      record.ingredientsImageKey = ingredientsImageKey;
-      record.nutritionImageUrl = nutritionImageUrl;
-      record.nutritionImageKey = nutritionImageKey;
-      record.voiceKey = voiceKey;
-
-      await createTasting(record);
-      try {
-        await invokeAsyncProcessing({
-          action: "process",
-          recordId: record.id,
-          imageKey,
-          ingredientsImageKey,
-          nutritionImageKey,
-          voiceKey,
-          imageMimeType: agentImageMimeType,
-          ingredientsImageMimeType: agentIngredientsImageMimeType,
-          nutritionImageMimeType: agentNutritionImageMimeType,
-          voiceMimeType: agentVoiceMimeType
-        });
-      } catch (error) {
-        const message = (error as Error).message;
-        await updateRecordStatus(record, "error", message);
-        logWarn("agent.process.invoke.failed", { recordId: record.id, error: message });
-      }
-
-      return emptyResponse(204, corsHeaders);
-    }
-
-    const mediaMatch = method === "POST" ? path.match(/^\/tastings\/([^/]+)\/media$/) : null;
-    if (mediaMatch) {
-      const user = await verifyAuth(event.headers.authorization ?? event.headers.Authorization);
-      const recordId = decodeURIComponent(mediaMatch[1]);
-      const record = await getTasting(recordId);
-      if (!record) {
-        return jsonResponse(404, { message: "Tasting not found" }, corsHeaders);
-      }
-      if (record.createdBy && record.createdBy !== user.sub) {
-        return jsonResponse(403, { message: "Forbidden" }, corsHeaders);
-      }
-
-      const payload = parseJsonBody<UpdateTastingMediaInput>(event.body, event.isBase64Encoded);
-      const parsed = validateUpdateTastingMedia(payload);
-
-      const imagePayload = parseBase64Data(parsed.imageBase64, parsed.imageMimeType);
-      const ingredientsImagePayload = parseBase64Data(parsed.ingredientsImageBase64, parsed.ingredientsImageMimeType);
-      const nutritionImagePayload = parseBase64Data(parsed.nutritionImageBase64, parsed.nutritionImageMimeType);
-
-      if (!imagePayload && !ingredientsImagePayload && !nutritionImagePayload) {
-        return jsonResponse(400, { message: "No media provided" }, corsHeaders);
-      }
-
-      if (imagePayload) {
-        const ext = imagePayload.contentType.split("/")[1] ?? "jpg";
-        const imageKey = `images/${record.id}-${Date.now()}.${ext}`;
-        record.imageKey = imageKey;
-        record.imageUrl = await uploadMedia(imageKey, imagePayload);
-      }
-
-      if (ingredientsImagePayload) {
-        const ext = ingredientsImagePayload.contentType.split("/")[1] ?? "jpg";
-        const ingredientsImageKey = `images/${record.id}-ingredients-${Date.now()}.${ext}`;
-        record.ingredientsImageKey = ingredientsImageKey;
-        record.ingredientsImageUrl = await uploadMedia(ingredientsImageKey, ingredientsImagePayload);
-      }
-
-      if (nutritionImagePayload) {
-        const ext = nutritionImagePayload.contentType.split("/")[1] ?? "jpg";
-        const nutritionImageKey = `images/${record.id}-nutrition-${Date.now()}.${ext}`;
-        record.nutritionImageKey = nutritionImageKey;
-        record.nutritionImageUrl = await uploadMedia(nutritionImageKey, nutritionImagePayload);
-      }
-
-      record.updatedAt = new Date().toISOString();
-      await putTasting(record);
-
-      return jsonResponse(200, { data: stripAudioFields(record) }, corsHeaders);
-    }
-
-    const deleteMatch = method === "DELETE" ? path.match(/^\/tastings\/([^/]+)$/) : null;
-    if (deleteMatch) {
-      const user = await verifyAuth(event.headers.authorization ?? event.headers.Authorization);
-      const recordId = decodeURIComponent(deleteMatch[1]);
-      const record = await getTasting(recordId);
-      if (!record) {
-        return jsonResponse(404, { message: "Tasting not found" }, corsHeaders);
-      }
-      if (record.createdBy && record.createdBy !== user.sub) {
-        return jsonResponse(403, { message: "Forbidden" }, corsHeaders);
-      }
-      await deleteTasting(record.id);
-      logInfo("tasting.deleted", { recordId: record.id });
-      return emptyResponse(204, corsHeaders);
-    }
-
-    const rerunMatch = method === "POST" ? path.match(/^\/tastings\/([^/]+)\/rerun$/) : null;
-    if (rerunMatch) {
-      const user = await verifyAuth(event.headers.authorization ?? event.headers.Authorization);
-      const recordId = decodeURIComponent(rerunMatch[1]);
-      const record = await getTasting(recordId);
-      if (!record) {
-        return jsonResponse(404, { message: "Tasting not found" }, corsHeaders);
-      }
-      if (record.createdBy && record.createdBy !== user.sub) {
-        return jsonResponse(403, { message: "Forbidden" }, corsHeaders);
-      }
-      if (!record.imageKey && !record.ingredientsImageKey && !record.nutritionImageKey && !record.voiceKey) {
-        return jsonResponse(400, { message: "No media available to process" }, corsHeaders);
-      }
-
-      await updateRecordStatus(record, "pending");
-
-      const imageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.imageKey));
-      const ingredientsImageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.ingredientsImageKey));
-      const nutritionImageMimeType = normalizeMimeType(inferMimeTypeFromKey(record.nutritionImageKey));
-      const voiceMimeType = normalizeMimeType(inferMimeTypeFromKey(record.voiceKey));
-
-      try {
-        await invokeAsyncProcessing({
-          action: "process",
-          recordId: record.id,
-          imageKey: record.imageKey,
-          ingredientsImageKey: record.ingredientsImageKey,
-          nutritionImageKey: record.nutritionImageKey,
-          voiceKey: record.voiceKey,
-          imageMimeType,
-          ingredientsImageMimeType,
-          nutritionImageMimeType,
-          voiceMimeType,
-          forceVoice: true
-        });
-      } catch (error) {
-        const message = (error as Error).message;
-        await updateRecordStatus(record, "error", message);
-        logWarn("agent.process.invoke.failed", { recordId: record.id, error: message });
-      }
-
-      return emptyResponse(204, corsHeaders);
-    }
-
-    return jsonResponse(404, { message: "Not found" }, corsHeaders);
+    return await routeRequest(event, corsHeaders);
   } catch (error) {
     logError("handler.error", { error: (error as Error).message });
     return jsonResponse(400, { message: (error as Error).message }, corsHeaders);

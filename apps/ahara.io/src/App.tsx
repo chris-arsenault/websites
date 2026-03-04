@@ -9,7 +9,7 @@ import './App.css';
 
 type Tab = 'projects' | 'news' | 'admin';
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({ project }: Readonly<{ project: Project }>) {
   const [expanded, setExpanded] = useState(false);
 
   const statusColors: Record<Project['status'], string> = {
@@ -126,7 +126,7 @@ function ProjectsPage() {
   );
 }
 
-function NewsCard({ article }: { article: NewsArticle }) {
+function NewsCard({ article }: Readonly<{ article: NewsArticle }>) {
   const project = projects.find((p) => p.id === article.projectId);
 
   return (
@@ -176,7 +176,9 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    void getSession().then((s) => setAuthenticated(!!s));
+    getSession()
+      .then((s) => setAuthenticated(!!s))
+      .catch(() => setAuthenticated(false));
   }, []);
 
   const handleLogin = () => {

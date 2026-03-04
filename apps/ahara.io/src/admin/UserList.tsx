@@ -7,7 +7,7 @@ type Props = {
   onAdd: () => void;
 };
 
-export function UserList({ users, onEdit, onDelete, onAdd }: Props) {
+export function UserList({ users, onEdit, onDelete, onAdd }: Readonly<Props>) {
   return (
     <div className="user-list">
       <div className="user-list-header">

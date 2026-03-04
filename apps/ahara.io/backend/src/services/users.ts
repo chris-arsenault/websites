@@ -3,6 +3,7 @@ import { DynamoDBDocumentClient, ScanCommand, PutCommand, DeleteCommand, GetComm
 import {
   CognitoIdentityProviderClient,
   AdminCreateUserCommand,
+  AdminSetUserPasswordCommand,
   AdminDisableUserCommand,
   AdminEnableUserCommand,
   ListUsersCommand
@@ -43,7 +44,7 @@ export const deleteUser = async (username: string): Promise<void> => {
   );
 };
 
-export const ensureCognitoUser = async (username: string): Promise<void> => {
+export const ensureCognitoUser = async (username: string, password?: string): Promise<void> => {
   const existing = await cognito.send(
     new ListUsersCommand({
       UserPoolId: userPoolId,
@@ -59,15 +60,26 @@ export const ensureCognitoUser = async (username: string): Promise<void> => {
     return;
   }
 
+  if (!password) throw new Error("Password is required for new users");
+
   await cognito.send(
     new AdminCreateUserCommand({
       UserPoolId: userPoolId,
       Username: username,
+      MessageAction: "SUPPRESS",
       UserAttributes: [
         { Name: "email", Value: username },
         { Name: "email_verified", Value: "true" }
-      ],
-      DesiredDeliveryMediums: ["EMAIL"]
+      ]
+    })
+  );
+
+  await cognito.send(
+    new AdminSetUserPasswordCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+      Password: password,
+      Permanent: true
     })
   );
 };
