@@ -44,30 +44,14 @@ output "all_sites" {
   }
 }
 
-output "cognito_chris_password" {
-  description = "Initial password for chris@chris-arsenault.net"
-  value       = random_password.cognito_chris.result
-  sensitive   = true
-}
-
-output "cognito_user_pool_id" {
-  description = "Cognito user pool ID"
-  value       = module.cognito.user_pool_id
-}
-
-output "cognito_client_ids" {
-  description = "Map of Cognito client keys to app client IDs"
-  value       = module.cognito.client_ids
-}
-
 output "canonry_config" {
   description = "Canonry AWS modal settings"
   value = {
     region             = data.aws_region.current.id
     identityPoolId     = aws_cognito_identity_pool.canonry.id
-    cognitoUserPoolId  = module.cognito.user_pool_id
-    cognitoClientId    = module.cognito.client_ids["canonry"]
-    cognitoDomain      = module.cognito.domain_name
+    cognitoUserPoolId  = local.cognito_user_pool_id
+    cognitoClientId    = local.cognito_client_ids["canonry"]
+    cognitoDomain      = local.cognito_domain
     cognitoRedirectUri = local.canonry_redirect_uri
     cognitoScope       = local.canonry_scope
     imageBucket        = local.canonry_image_bucket
