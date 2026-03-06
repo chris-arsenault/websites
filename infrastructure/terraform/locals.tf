@@ -22,14 +22,6 @@ locals {
   scorchbook_media_bucket    = "${local.scorchbook_name_prefix}-media"
   scorchbook_table_name      = "${local.scorchbook_name_prefix}-tastings"
 
-  cognito_user_pool_name = "${local.scorchbook_name_prefix}-users"
-  cognito_clients = {
-    scorchbook = "${local.scorchbook_name_prefix}-app"
-    svap       = "svap-app"
-    canonry    = "${local.scorchbook_name_prefix}-canonry-app"
-    ahara      = "ahara-app"
-  }
-
   ahara_api_domain      = "api.${local.ahara_domain_name}"
   ahara_frontend_bucket = "ahara-io-frontend"
   ahara_allowed_origins = [
@@ -46,6 +38,4 @@ locals {
   canonry_use_s3_images      = true
 
   sonarqube_domain = "sonar.${local.ahara_domain_name}"
-
-  user_access_table_name = "websites-user-access"
 }
