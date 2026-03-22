@@ -3,8 +3,8 @@ resource "aws_cognito_identity_pool" "canonry" {
   allow_unauthenticated_identities = false
 
   cognito_identity_providers {
-    client_id               = module.cognito.client_ids["canonry"]
-    provider_name           = "cognito-idp.${data.aws_region.current.id}.amazonaws.com/${module.cognito.user_pool_id}"
+    client_id               = local.cognito_client_ids["canonry"]
+    provider_name           = "cognito-idp.${data.aws_region.current.id}.amazonaws.com/${local.cognito_user_pool_id}"
     server_side_token_check = true
   }
 }
@@ -85,15 +85,15 @@ resource "aws_iam_role_policy" "canonry_access" {
 }
 
 resource "aws_cognito_user_group" "canonry_access" {
-  user_pool_id = module.cognito.user_pool_id
+  user_pool_id = local.cognito_user_pool_id
   name         = local.canonry_access_group_name
   description  = "Canonry access"
   role_arn     = aws_iam_role.canonry_access.arn
 }
 
 resource "aws_cognito_user_in_group" "chris_canonry_access" {
-  user_pool_id = module.cognito.user_pool_id
-  username     = aws_cognito_user.chris.username
+  user_pool_id = local.cognito_user_pool_id
+  username     = "chris"
   group_name   = aws_cognito_user_group.canonry_access.name
 }
 
@@ -105,7 +105,7 @@ resource "aws_cognito_identity_pool_roles_attachment" "canonry" {
   }
 
   role_mapping {
-    identity_provider         = "cognito-idp.${data.aws_region.current.id}.amazonaws.com/${module.cognito.user_pool_id}:${module.cognito.client_ids["canonry"]}"
+    identity_provider         = "cognito-idp.${data.aws_region.current.id}.amazonaws.com/${local.cognito_user_pool_id}:${local.cognito_client_ids["canonry"]}"
     type                      = "Token"
     ambiguous_role_resolution = "Deny"
   }

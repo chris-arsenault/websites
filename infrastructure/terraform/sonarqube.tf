@@ -28,38 +28,6 @@ resource "aws_ssm_parameter" "sonarqube_admin_password" {
   value = random_password.sonarqube_admin.result
 }
 
-resource "aws_ssm_parameter" "sonarqube_cognito_client_id" {
-  name  = "/websites/sonarqube/cognito-client-id"
-  type  = "String"
-  value = aws_cognito_user_pool_client.sonarqube.id
-}
-
-resource "aws_ssm_parameter" "sonarqube_cognito_client_secret" {
-  name  = "/websites/sonarqube/cognito-client-secret"
-  type  = "SecureString"
-  value = aws_cognito_user_pool_client.sonarqube.client_secret
-}
-
-# --- Cognito App Client ---
-
-resource "aws_cognito_user_pool_client" "sonarqube" {
-  name         = "sonarqube"
-  user_pool_id = module.cognito.user_pool_id
-
-  generate_secret                      = true
-  allowed_oauth_flows                  = ["code"]
-  allowed_oauth_scopes                 = ["openid", "email", "profile"]
-  allowed_oauth_flows_user_pool_client = true
-  callback_urls                        = ["https://${local.sonarqube_domain}/oauth2/callback/oidc"]
-  supported_identity_providers         = ["COGNITO"]
-
-  explicit_auth_flows = [
-    "ALLOW_USER_PASSWORD_AUTH",
-    "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_SRP_AUTH"
-  ]
-}
-
 # --- IAM ---
 
 data "aws_iam_policy_document" "sonarqube_assume" {
@@ -172,7 +140,7 @@ resource "aws_instance" "sonarqube" {
   user_data = templatefile("${path.module}/sonarqube-userdata.sh.tftpl", {
     aws_region      = data.aws_region.current.id
     domain          = local.sonarqube_domain
-    cognito_pool_id = module.cognito.user_pool_id
+    cognito_pool_id = local.cognito_user_pool_id
     ssm_prefix      = "/websites/sonarqube"
     oidc_plugin_url = "https://github.com/sonar-auth-oidc/sonar-auth-oidc/releases/download/v3.0.0/sonar-auth-oidc-plugin-3.0.0.jar"
     data_device     = "/dev/xvdf"

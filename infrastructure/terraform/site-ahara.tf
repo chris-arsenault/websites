@@ -6,7 +6,7 @@ data "aws_iam_policy_document" "ahara_lambda" {
       "dynamodb:DeleteItem",
       "dynamodb:Scan"
     ]
-    resources = [module.user_access_table.arn]
+    resources = [local.user_access_table_arn]
   }
 
   statement {
@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "ahara_lambda" {
       "cognito-idp:AdminEnableUser",
       "cognito-idp:ListUsers"
     ]
-    resources = [module.cognito.user_pool_arn]
+    resources = [local.cognito_user_pool_arn]
   }
 }
 
@@ -29,9 +29,9 @@ module "ahara_api" {
   lambda_runtime    = "nodejs24.x"
   lambda_handler    = "handler.handler"
   lambda_environment = {
-    TABLE_NAME           = module.user_access_table.name
-    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
-    COGNITO_CLIENT_ID    = module.cognito.client_ids["ahara"]
+    TABLE_NAME           = local.user_access_table_name
+    COGNITO_USER_POOL_ID = local.cognito_user_pool_id
+    COGNITO_CLIENT_ID    = local.cognito_client_ids["ahara"]
     ALLOWED_ORIGINS      = join(",", local.ahara_allowed_origins)
   }
   iam_policy_json    = data.aws_iam_policy_document.ahara_lambda.json
@@ -50,7 +50,7 @@ module "ahara_site" {
   bucket_name         = local.ahara_frontend_bucket
   runtime_config = {
     apiBaseUrl        = "https://${local.ahara_api_domain}"
-    cognitoUserPoolId = module.cognito.user_pool_id
-    cognitoClientId   = module.cognito.client_ids["ahara"]
+    cognitoUserPoolId = local.cognito_user_pool_id
+    cognitoClientId   = local.cognito_client_ids["ahara"]
   }
 }
