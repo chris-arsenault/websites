@@ -35,10 +35,4 @@ tf init \
 echo "Applying Terraform..."
 tf apply -auto-approve
 
-echo "Cognito user password:"
-PASSWORD="$(tf output -raw cognito_chris_password 2>/dev/null || true)"
-if [ -n "${PASSWORD}" ]; then
-  echo "${PASSWORD}"
-else
-  echo "Password not available."
-fi
+echo "Websites deployed."
