@@ -73,20 +73,38 @@ type Props = {
   onCancel: () => void;
 };
 
+function getInitialState(user?: UserRecord) {
+  return {
+    username: user?.username ?? "",
+    email: user?.email ?? "",
+    displayName: user?.displayName ?? "",
+    apps: user?.apps ?? {},
+  };
+}
+
+function buildSavePayload(
+  fields: { username: string; email: string; displayName: string; apps: Record<string, string> },
+  isNew: boolean,
+  password: string,
+): UserRecord {
+  return { ...fields, email: fields.email || undefined, ...(isNew && password ? { password } : {}) };
+}
+
 export function UserEditor({ user, onSave, onCancel }: Readonly<Props>) {
   const isNew = !user;
-  const [username, setUsername] = useState(user?.username ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
+  const defaults = getInitialState(user);
+  const [username, setUsername] = useState(defaults.username);
+  const [email, setEmail] = useState(defaults.email);
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
-  const [apps, setApps] = useState<Record<string, string>>(user?.apps ?? {});
+  const [displayName, setDisplayName] = useState(defaults.displayName);
+  const [apps, setApps] = useState<Record<string, string>>(defaults.apps);
 
   const handleToggle = useCallback((k: string) => setApps((p) => toggleAppKey(p, k)), []);
   const handleRoleChange = useCallback((k: string, r: string) => setApps((p) => ({ ...p, [k]: r })), []);
 
   const handleSubmit = (e: React.SubmitEvent) => {
     e.preventDefault();
-    onSave({ username, email: email || undefined, displayName, apps, ...(isNew && password ? { password } : {}) });
+    onSave(buildSavePayload({ username, email, displayName, apps }, isNew, password));
   };
 
   return (

@@ -36,6 +36,4 @@ locals {
   canonry_redirect_uri       = "https://the-canonry.com"
   canonry_scope              = "openid email profile"
   canonry_use_s3_images      = true
-
-  sonarqube_domain = "sonar.${local.ahara_domain_name}"
 }

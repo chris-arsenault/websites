@@ -69,7 +69,7 @@ jobs:
           aws-region: us-east-1
       - name: Read SonarQube token from SSM
         run: |
-          echo "SONAR_TOKEN=$(aws ssm get-parameter --name /websites/sonarqube/ci-token --with-decryption --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+          echo "SONAR_TOKEN=$(aws ssm get-parameter --name /platform/sonarqube/ci-token --with-decryption --query Parameter.Value --output text)" >> "$GITHUB_ENV"
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v7
         env:
