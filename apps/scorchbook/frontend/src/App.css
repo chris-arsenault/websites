@@ -406,6 +406,7 @@
   left: 0;
   top: 0;
   height: 100%;
+  width: var(--fill-width, 0%);
   background: linear-gradient(90deg, var(--gold), var(--ember), var(--flame-red));
   border-radius: 12px;
   transition: width 0.15s ease;
@@ -442,6 +443,7 @@
 
 .score-track .slider-fill {
   height: 100%;
+  width: var(--fill-width, 0%);
   background: linear-gradient(90deg, var(--jalapeño), var(--fresh-green));
   border-radius: 2px;
 }
@@ -1366,6 +1368,7 @@
 
 .score-bar .score-fill {
   height: 100%;
+  width: var(--fill-width, 0%);
   background: linear-gradient(90deg, var(--jalapeño), var(--fresh-green));
   border-radius: 3px;
 }

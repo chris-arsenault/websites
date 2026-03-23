@@ -5,6 +5,7 @@ const defaultHeaders = {
   "X-Content-Type-Options": "nosniff"
 };
 
+// eslint-disable-next-line sonarjs/function-return-type -- always returns APIGatewayProxyResultV2
 export const jsonResponse = (statusCode: number, body: unknown, headers?: Record<string, string>): APIGatewayProxyResultV2 => {
   return {
     statusCode,
@@ -16,6 +17,7 @@ export const jsonResponse = (statusCode: number, body: unknown, headers?: Record
   };
 };
 
+// eslint-disable-next-line sonarjs/function-return-type -- always returns APIGatewayProxyResultV2
 export const emptyResponse = (statusCode: number, headers?: Record<string, string>): APIGatewayProxyResultV2 => {
   return {
     statusCode,

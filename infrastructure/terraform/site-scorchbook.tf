@@ -59,13 +59,13 @@ module "scorchbook_api" {
     TABLE_NAME            = module.scorchbook_table.name
     MEDIA_BUCKET          = module.scorchbook_media.bucket
     PUBLIC_MEDIA_BASE_URL = "https://${module.scorchbook_media.bucket}.s3.amazonaws.com"
-    COGNITO_USER_POOL_ID  = module.cognito.user_pool_id
-    COGNITO_CLIENT_ID     = module.cognito.client_ids["scorchbook"]
+    COGNITO_USER_POOL_ID  = local.cognito_user_pool_id
+    COGNITO_CLIENT_ID     = local.cognito_client_ids["scorchbook"]
     ALLOWED_ORIGINS       = join(",", local.scorchbook_allowed_origins)
     TAVILY_API_KEY        = data.aws_secretsmanager_secret_version.tavily.secret_string
   }
-  iam_policy_json    = data.aws_iam_policy_document.scorchbook_lambda.json
-  routes             = [
+  iam_policy_json = data.aws_iam_policy_document.scorchbook_lambda.json
+  routes = [
     "GET /tastings",
     "POST /tastings",
     "POST /tastings/{id}/media",
@@ -86,7 +86,7 @@ module "scorchbook_site" {
   bucket_name         = local.scorchbook_frontend_bucket
   runtime_config = {
     apiBaseUrl        = "https://${local.scorchbook_api_domain}"
-    cognitoUserPoolId = module.cognito.user_pool_id
-    cognitoClientId   = module.cognito.client_ids["scorchbook"]
+    cognitoUserPoolId = local.cognito_user_pool_id
+    cognitoClientId   = local.cognito_client_ids["scorchbook"]
   }
 }

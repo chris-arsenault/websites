@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="${ROOT_DIR}/infrastructure/terraform"
 
-STATE_BUCKET="${STATE_BUCKET:-tf-state-websites-559098897826}"
+STATE_BUCKET="${STATE_BUCKET:-tfstate-559098897826}"
 STATE_REGION="${STATE_REGION:-us-east-1}"
 USE_LOCKFILE="${USE_LOCKFILE:-true}"
 
@@ -35,10 +35,4 @@ tf init \
 echo "Applying Terraform..."
 tf apply -auto-approve
 
-echo "Cognito user password:"
-PASSWORD="$(tf output -raw cognito_chris_password 2>/dev/null || true)"
-if [ -n "${PASSWORD}" ]; then
-  echo "${PASSWORD}"
-else
-  echo "Password not available."
-fi
+echo "Websites deployed."

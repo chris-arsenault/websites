@@ -1,0 +1,77 @@
+name: Lint
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    name: eslint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install
+      - run: pnpm exec eslint .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { path: "apps/ahara.io", name: "ahara-frontend" }
+          - { path: "apps/ahara.io/backend", name: "ahara-backend" }
+          - { path: "apps/scorchbook/frontend", name: "scorchbook-frontend" }
+          # scorchbook backend has pre-existing TS errors — enable after fixing
+          # - { path: "apps/scorchbook/backend", name: "scorchbook-backend" }
+          - { path: "apps/auth-trigger", name: "auth-trigger" }
+    name: typecheck (${{ matrix.app.name }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install
+      - run: pnpm exec tsc --noEmit
+        working-directory: ${{ matrix.app.path }}
+
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    name: terraform fmt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+      - name: Check formatting
+        working-directory: infrastructure/terraform
+        run: terraform fmt -check -recursive
+
+  sonarqube:
+    runs-on: ubuntu-latest
+    name: sonarqube
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+          aws-region: us-east-1
+      - name: Read SonarQube token from SSM
+        run: |
+          echo "SONAR_TOKEN=$(aws ssm get-parameter --name /websites/sonarqube/ci-token --with-decryption --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonar.ahara.io

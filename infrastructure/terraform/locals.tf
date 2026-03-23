@@ -22,8 +22,20 @@ locals {
   scorchbook_media_bucket    = "${local.scorchbook_name_prefix}-media"
   scorchbook_table_name      = "${local.scorchbook_name_prefix}-tastings"
 
-  cognito_user_pool_name = "${local.scorchbook_name_prefix}-users"
-  cognito_clients = {
-    scorchbook = "${local.scorchbook_name_prefix}-app"
-  }
+  ahara_api_domain      = "api.${local.ahara_domain_name}"
+  ahara_frontend_bucket = "ahara-io-frontend"
+  ahara_allowed_origins = [
+    "http://localhost:5173",
+    "https://${local.ahara_hostname}"
+  ]
+
+  canonry_access_group_name  = "canonry-access"
+  canonry_identity_pool_name = "${local.scorchbook_name_prefix}-canonry"
+  canonry_image_bucket       = "${local.scorchbook_name_prefix}-canonry-images-prod"
+  canonry_image_prefix       = ""
+  canonry_redirect_uri       = "https://the-canonry.com"
+  canonry_scope              = "openid email profile"
+  canonry_use_s3_images      = true
+
+  sonarqube_domain = "sonar.${local.ahara_domain_name}"
 }

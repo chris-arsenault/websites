@@ -25,56 +25,53 @@ export type ListFilters = {
   date?: string;
 };
 
+type FilterExpression = {
+  parts: string[];
+  values: Record<string, unknown>;
+  names: Record<string, string>;
+};
+
+const filterRules: Array<{
+  key: keyof ListFilters;
+  expr: string;
+  valueKey: string;
+  nameKey?: string;
+  nameValue?: string;
+  contains?: boolean;
+}> = [
+  { key: "name", expr: "contains(#name, :name)", valueKey: ":name", nameKey: "#name", nameValue: "name" },
+  { key: "style", expr: "contains(#style, :style)", valueKey: ":style", nameKey: "#style", nameValue: "style" },
+  { key: "minScore", expr: "score >= :minScore", valueKey: ":minScore" },
+  { key: "maxScore", expr: "score <= :maxScore", valueKey: ":maxScore" },
+  { key: "minHeat", expr: "heatUser >= :minHeat", valueKey: ":minHeat" },
+  { key: "maxHeat", expr: "heatUser <= :maxHeat", valueKey: ":maxHeat" },
+  { key: "date", expr: "#date = :date", valueKey: ":date", nameKey: "#date", nameValue: "date" }
+];
+
+const buildFilterExpression = (filters: ListFilters): FilterExpression => {
+  const result: FilterExpression = { parts: [], values: {}, names: {} };
+  for (const rule of filterRules) {
+    const value = filters[rule.key];
+    if (value === undefined || value === "") continue;
+    result.parts.push(rule.expr);
+    result.values[rule.valueKey] = value;
+    if (rule.nameKey && rule.nameValue) {
+      result.names[rule.nameKey] = rule.nameValue;
+    }
+  }
+  return result;
+};
+
+const orUndefined = <T,>(obj: Record<string, T>) => Object.keys(obj).length ? obj : undefined;
+
 export const listTastings = async (filters: ListFilters): Promise<TastingRecord[]> => {
-  const expressionParts: string[] = [];
-  const expressionValues: Record<string, unknown> = {};
-  const expressionNames: Record<string, string> = {};
-
-  if (filters.name) {
-    expressionParts.push("contains(#name, :name)");
-    expressionValues[":name"] = filters.name;
-    expressionNames["#name"] = "name";
-  }
-
-  if (filters.style) {
-    expressionParts.push("contains(#style, :style)");
-    expressionValues[":style"] = filters.style;
-    expressionNames["#style"] = "style";
-  }
-
-  if (filters.minScore !== undefined) {
-    expressionParts.push("score >= :minScore");
-    expressionValues[":minScore"] = filters.minScore;
-  }
-
-  if (filters.maxScore !== undefined) {
-    expressionParts.push("score <= :maxScore");
-    expressionValues[":maxScore"] = filters.maxScore;
-  }
-
-  if (filters.minHeat !== undefined) {
-    expressionParts.push("heatUser >= :minHeat");
-    expressionValues[":minHeat"] = filters.minHeat;
-  }
-
-  if (filters.maxHeat !== undefined) {
-    expressionParts.push("heatUser <= :maxHeat");
-    expressionValues[":maxHeat"] = filters.maxHeat;
-  }
-
-  if (filters.date) {
-    expressionParts.push("#date = :date");
-    expressionValues[":date"] = filters.date;
-    expressionNames["#date"] = "date";
-  }
-
+  const expr = buildFilterExpression(filters);
   const command = new ScanCommand({
     TableName: tableName(),
-    FilterExpression: expressionParts.length > 0 ? expressionParts.join(" AND ") : undefined,
-    ExpressionAttributeValues: Object.keys(expressionValues).length ? expressionValues : undefined,
-    ExpressionAttributeNames: Object.keys(expressionNames).length ? expressionNames : undefined
+    FilterExpression: expr.parts.length > 0 ? expr.parts.join(" AND ") : undefined,
+    ExpressionAttributeValues: orUndefined(expr.values),
+    ExpressionAttributeNames: orUndefined(expr.names)
   });
-
   const response = await docClient.send(command);
   return (response.Items as TastingRecord[]) ?? [];
 };
@@ -88,14 +85,7 @@ export const createTasting = async (item: TastingRecord): Promise<void> => {
   await docClient.send(command);
 };
 
-export const putTasting = async (item: TastingRecord): Promise<void> => {
-  const command = new PutCommand({
-    TableName: tableName(),
-    Item: item
-  });
-
-  await docClient.send(command);
-};
+export const putTasting = createTasting;
 
 export const getTasting = async (id: string): Promise<TastingRecord | null> => {
   const command = new GetCommand({
