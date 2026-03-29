@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     name: eslint
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v4
         with:
@@ -32,7 +32,7 @@ jobs:
           - { path: "apps/auth-trigger", name: "auth-trigger" }
     name: typecheck (${{ matrix.app.name }})
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v4
         with:
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     name: terraform fmt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: hashicorp/setup-terraform@v4
       - name: Check formatting
         working-directory: infrastructure/terraform
@@ -59,7 +59,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: aws-actions/configure-aws-credentials@v6
