@@ -100,10 +100,30 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE }}
           role-session-name: GitHubActions-${{ github.run_id }}
           aws-region: us-east-1
-      - name: Deploy
+      - name: Build apps
+        run: |
+          for package_json in $(find apps -name package.json -not -path "*/node_modules/*" -not -path "*/dist/*"); do
+            app_dir="$(dirname "${package_json}")"
+            if node -e "const pkg=require('./${package_json}'); process.exit(pkg.scripts && pkg.scripts.build ? 0 : 1)"; then
+              echo "Building ${app_dir}..."
+              if [ -f "${app_dir}/package-lock.json" ]; then
+                (cd "${app_dir}" && npm ci)
+              else
+                (cd "${app_dir}" && npm install)
+              fi
+              (cd "${app_dir}" && npm run build)
+            fi
+          done
+
+      - name: Terraform deploy
         env:
           STATE_BUCKET: ${{ secrets.STATE_BUCKET }}
-        run: bash scripts/deploy.sh
+        run: |
+          terraform -chdir=infrastructure/terraform init \
+            -backend-config="bucket=${STATE_BUCKET}" \
+            -backend-config="region=us-east-1" \
+            -backend-config="use_lockfile=true"
+          terraform -chdir=infrastructure/terraform apply -auto-approve
 
   report:
     if: always()
