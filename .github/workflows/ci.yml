@@ -1,13 +1,19 @@
-name: Lint
+name: CI/CD
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  eslint:
+  lint:
     runs-on: ubuntu-latest
-    name: eslint
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
@@ -75,3 +81,42 @@ jobs:
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonar.ahara.io
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: [lint, typecheck, terraform-fmt]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: websites-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: hashicorp/setup-terraform@v4
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+          aws-region: us-east-1
+      - name: Deploy
+        env:
+          STATE_BUCKET: ${{ secrets.STATE_BUCKET }}
+        run: bash scripts/deploy.sh
+
+  report:
+    if: always()
+    needs: [lint, typecheck, terraform-fmt, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+          aws-region: us-east-1
+      - uses: chris-arsenault/platform/.github/actions/report-build@main
+        with:
+          status: ${{ (needs.deploy.result == 'success' && 'success') || (needs.lint.result == 'failure' && 'failure') || (needs.typecheck.result == 'failure' && 'failure') || needs.deploy.result }}
+          lint-passed: ${{ needs.lint.result == 'success' && needs.typecheck.result == 'success' }}

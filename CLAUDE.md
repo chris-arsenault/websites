@@ -5,7 +5,6 @@ These are production-only, personal sites. Keep work fast and simple. Avoid extr
 ## Sites and Domains
 
 - `apps/ahara.io` -> `https://ahara.io`
-- `apps/scorchbook` -> `https://sauce.ahara.io` (frontend), `https://sauce-api.ahara.io` (API)
 - `apps/ru-ai.net` -> `https://ru-ai.net` (site), `https://api.ru-ai.net` (API)
 - `apps/stack-atlas` -> `https://stack-atlas.ahara.io`
 
@@ -19,7 +18,7 @@ These are production-only, personal sites. Keep work fast and simple. Avoid extr
 - Static assets live in S3 and are served via CloudFront.
 - DNS and TLS are managed by Route53 + ACM from Terraform.
 - APIs are Lambda functions behind API Gateway HTTP APIs.
-- Supporting infrastructure includes DynamoDB, S3 media buckets, and Cognito for the scorchbook app.
+- Supporting infrastructure includes Cognito identity pool for canonry.
 
 ## Security
 
