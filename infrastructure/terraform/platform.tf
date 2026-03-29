@@ -23,7 +23,7 @@ locals {
   cognito_client_ids = {
     ahara = nonsensitive(data.aws_ssm_parameter.cognito_client_ahara.value)
   }
-  user_access_table_name = "websites-user-access"
+  user_access_table_name = "platform-user-access"
   user_access_table_arn  = "arn:aws:dynamodb:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${local.user_access_table_name}"
 }
 
