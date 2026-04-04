@@ -88,8 +88,8 @@ jobs:
       group: websites-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
       - uses: hashicorp/setup-terraform@v4
@@ -128,7 +128,7 @@ jobs:
     needs: [lint, typecheck, terraform-fmt, deploy]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE }}
