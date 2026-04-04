@@ -1,4 +1,6 @@
-.PHONY: lint lint-fix format format-check typecheck terraform-fmt terraform-fmt-check
+.PHONY: ci lint lint-fix format format-check typecheck terraform-fmt terraform-fmt-check
+
+ci: lint typecheck terraform-fmt-check
 
 lint:
 	pnpm exec eslint .

@@ -23,3 +23,7 @@ These are production-only, personal sites. Keep work fast and simple. Avoid extr
 ## Security
 
 - The only real security concern is AWS access through Lambda IAM policies. Keep those narrow and scoped.
+
+## Pre-commit CI check
+
+**Run `make ci` before committing any change.** This runs the same lint, format, typecheck, and test steps as GitHub Actions. Do not commit if it fails.
