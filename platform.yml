@@ -1,2 +1,5 @@
 project: websites
 prefix: websites
+stack:
+  - typescript
+  - terraform
