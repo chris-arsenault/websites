@@ -22,7 +22,8 @@ jobs:
           node-version: "24"
           cache: "pnpm"
       - run: pnpm install
-      - run: pnpm exec eslint .
+      - name: Lint eslint
+        run: pnpm exec eslint .
 
   typecheck:
     runs-on: ubuntu-latest
@@ -45,7 +46,8 @@ jobs:
           node-version: "24"
           cache: "pnpm"
       - run: pnpm install
-      - run: pnpm exec tsc --noEmit
+      - name: Lint typecheck
+        run: pnpm exec tsc --noEmit
         working-directory: ${{ matrix.app.path }}
 
   terraform-fmt:
@@ -54,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: hashicorp/setup-terraform@v4
-      - name: Check formatting
+      - name: Lint terraform
         working-directory: infrastructure/terraform
         run: terraform fmt -check -recursive
 
@@ -135,6 +137,3 @@ jobs:
           role-session-name: GitHubActions-${{ github.run_id }}
           aws-region: us-east-1
       - uses: chris-arsenault/platform/.github/actions/report-build@main
-        with:
-          status: ${{ (needs.deploy.result == 'success' && 'success') || (needs.lint.result == 'failure' && 'failure') || (needs.typecheck.result == 'failure' && 'failure') || needs.deploy.result }}
-          lint-passed: ${{ needs.lint.result == 'success' && needs.typecheck.result == 'success' }}
