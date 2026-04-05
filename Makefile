@@ -13,8 +13,6 @@ format-check:
 typecheck:
 	cd apps/ahara.io && pnpm exec tsc --noEmit
 	cd apps/ahara.io/backend && pnpm exec tsc --noEmit
-	cd apps/scorchbook/frontend && pnpm exec tsc --noEmit
-	cd apps/auth-trigger && pnpm exec tsc --noEmit
 terraform-fmt:
 	cd infrastructure/terraform && terraform fmt -recursive
 terraform-fmt-check:

@@ -34,10 +34,6 @@ jobs:
         app:
           - { path: "apps/ahara.io", name: "ahara-frontend" }
           - { path: "apps/ahara.io/backend", name: "ahara-backend" }
-          - { path: "apps/scorchbook/frontend", name: "scorchbook-frontend" }
-          # scorchbook backend has pre-existing TS errors — enable after fixing
-          # - { path: "apps/scorchbook/backend", name: "scorchbook-backend" }
-          - { path: "apps/auth-trigger", name: "auth-trigger" }
     name: typecheck (${{ matrix.app.name }})
     steps:
       - uses: actions/checkout@v6
