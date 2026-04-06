@@ -4,21 +4,19 @@ These are production-only, personal sites. Keep work fast and simple. Avoid extr
 
 ## Sites and Domains
 
-- `apps/ahara.io` -> `https://ahara.io`
-- `apps/ru-ai.net` -> `https://ru-ai.net` (site), `https://api.ru-ai.net` (API)
-- `apps/stack-atlas` -> `https://stack-atlas.ahara.io`
+- `apps/ru-ai.net` -> `https://ru-ai.ahara.io` (site), `https://api.ru-ai.ahara.io` (API)
 
 ## Deployment Pattern
 
 - `scripts/deploy.sh` builds any app under `apps/**` that has a `build` script, then applies Terraform in `infrastructure/terraform`.
-- Terraform uses modules for static sites (`static-website`), SPA sites with runtime config (`spa-website`), and APIs (`api-http`).
+- Terraform uses shared modules from `ahara-tf-patterns`: `static-website` for static sites, `alb-api` for APIs behind the shared ALB.
 
 ## Architecture Summary
 
 - Static assets live in S3 and are served via CloudFront.
 - DNS and TLS are managed by Route53 + ACM from Terraform.
-- APIs are Lambda functions behind API Gateway HTTP APIs.
-- Supporting infrastructure includes Cognito identity pool for canonry.
+- APIs are Lambda functions behind the shared ALB via `alb-api` module.
+- All infrastructure uses shared platform modules from `ahara-tf-patterns`.
 
 ## Security
 

@@ -2,6 +2,7 @@
 *.zip
 node_modules/
 dist/
+target/
 .terraform/
 *.tfstate
 *.tfstate.backup

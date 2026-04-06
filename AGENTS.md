@@ -4,17 +4,13 @@ This repo is a small collection of production-only personal websites. Keep chang
 
 ## Sites
 
-- `apps/ahara.io`: Vite + React static site deployed to S3 + CloudFront.
-- `apps/scorchbook`: Scorchbook with a Vite + React frontend and a Node.js Lambda backend.
-- `apps/ru-ai.net`: Static site with a small Node.js Lambda backend.
-- `apps/stack-atlas`: Stack Atlas Vite + React static site.
+- `apps/ru-ai.net`: Static site with a small Lambda backend, served at `ru-ai.ahara.io`.
 
 ## Architecture
 
-- Static sites use the Terraform `static-website` module (S3 + CloudFront + Route53 + ACM).
-- SPA runtime-config sites use the `spa-website` module (same stack plus runtime `config.js`).
-- APIs use the `api-http` module (API Gateway HTTP API + Lambda).
-- Supporting modules: `dynamo-table`, `s3-media`, `cognito`.
+- Static sites use the shared `static-website` module from `ahara-tf-patterns` (S3 + CloudFront + Route53 + ACM).
+- APIs use the shared `alb-api` module from `ahara-tf-patterns` (shared ALB + Lambda in VPC).
+- Shared infrastructure (VPC, ALB, subnets) discovered via `platform-context` module.
 
 ## Deployment
 
