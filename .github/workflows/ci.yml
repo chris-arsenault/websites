@@ -15,16 +15,3 @@ jobs:
   ci:
     uses: chris-arsenault/platform/.github/workflows/ci.yml@main
     secrets: inherit
-
-  report:
-    if: always()
-    needs: [ci]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ secrets.OIDC_ROLE }}
-          role-session-name: GitHubActions-${{ github.run_id }}
-          aws-region: us-east-1
-      - uses: chris-arsenault/platform/.github/actions/report-build@main

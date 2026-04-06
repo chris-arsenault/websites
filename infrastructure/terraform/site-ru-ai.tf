@@ -101,7 +101,7 @@ module "ru_ai_api" {
 
   lambdas = {
     proxy = {
-      zip = "${path.module}/../../apps/ru-ai.net/backend/target/lambda/proxy/bootstrap.zip"
+      binary = "${path.module}/../../apps/ru-ai.net/backend/target/lambda/proxy/bootstrap"
       routes = [
         {
           priority      = 201
