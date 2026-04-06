@@ -3,6 +3,8 @@
 node_modules/
 dist/
 target/
+target-cov/
+coverage/
 .terraform/
 *.tfstate
 *.tfstate.backup

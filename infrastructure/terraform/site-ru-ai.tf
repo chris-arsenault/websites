@@ -71,9 +71,9 @@ data "aws_iam_policy_document" "ru_ai_lambda" {
 module "ru_ai_site" {
   source = "git::https://github.com/chris-arsenault/ahara-tf-patterns.git//modules/website"
 
+  prefix         = local.ru_ai_resource_prefix
   hostname       = local.ru_ai_hostname
   site_directory = "${path.module}/../../apps/ru-ai.net/static"
-  spa            = false
   encrypt        = false
   runtime_config = {
     invoke_url = "https://${local.ru_ai_api_domain}/invoke"
@@ -87,6 +87,7 @@ module "ru_ai_site" {
 module "ru_ai_api" {
   source = "git::https://github.com/chris-arsenault/ahara-tf-patterns.git//modules/alb-api"
 
+  prefix   = local.ru_ai_resource_prefix
   hostname = local.ru_ai_api_domain
 
   iam_policy = data.aws_iam_policy_document.ru_ai_lambda.json
