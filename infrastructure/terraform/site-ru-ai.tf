@@ -90,7 +90,7 @@ module "ru_ai_api" {
   prefix   = local.ru_ai_resource_prefix
   hostname = local.ru_ai_api_domain
 
-  iam_policy = data.aws_iam_policy_document.ru_ai_lambda.json
+  iam_policy = [data.aws_iam_policy_document.ru_ai_lambda.json]
 
   environment = {
     TABLE_NAME            = aws_dynamodb_table.ru_ai_rate_limits.name
