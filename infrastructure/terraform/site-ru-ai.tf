@@ -104,7 +104,7 @@ module "ru_ai_api" {
       binary = "${path.module}/../../apps/ru-ai.net/backend/target/lambda/proxy/bootstrap"
       routes = [
         {
-          priority      = 201
+          priority      = 421
           paths         = ["/invoke"]
           methods       = ["POST", "OPTIONS"]
           authenticated = false
