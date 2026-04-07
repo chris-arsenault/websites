@@ -3,3 +3,6 @@ prefix: websites
 stack:
   - rust
   - terraform
+rust_artifacts:
+  lambdas:
+    - proxy
