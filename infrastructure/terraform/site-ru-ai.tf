@@ -58,7 +58,7 @@ data "aws_iam_policy_document" "ru_ai_lambda" {
       "bedrock:InvokeModelWithResponseStream"
     ]
     resources = [
-      "arn:aws:bedrock:${data.aws_region.current.id}::foundation-model/${local.ru_ai_bedrock_model_id}",
+      "arn:aws:bedrock:${data.aws_region.current.region}::foundation-model/${local.ru_ai_bedrock_model_id}",
       aws_bedrock_inference_profile.ru_ai_model_instance_profile.arn
     ]
   }
@@ -96,7 +96,7 @@ module "ru_ai_api" {
     TABLE_NAME            = aws_dynamodb_table.ru_ai_rate_limits.name
     RATE_LIMIT_PER_MINUTE = tostring(local.ru_ai_rate_limit_per_minute)
     MODEL_ID              = aws_bedrock_inference_profile.ru_ai_model_instance_profile.arn
-    BEDROCK_REGION        = data.aws_region.current.id
+    BEDROCK_REGION        = data.aws_region.current.region
   }
 
   lambdas = {
