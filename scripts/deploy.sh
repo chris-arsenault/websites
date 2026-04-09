@@ -12,6 +12,11 @@ tf() {
   terraform -chdir="${TF_DIR}" "$@"
 }
 
+# Build Rust Lambdas (the shared CI workflow does this automatically via
+# platform.yml rust_artifacts detection, but local deploys need it explicit).
+echo "Building Rust Lambdas..."
+(cd "${ROOT_DIR}/apps/ru-ai.net/backend" && cargo lambda build --release)
+
 echo "Building app assets..."
 while IFS= read -r package_json; do
   app_dir="$(dirname "${package_json}")"

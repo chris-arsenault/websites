@@ -1,5 +1,11 @@
 data "aws_region" "current" {}
 
+# Platform context — single instantiation, passed to every ahara-tf-patterns
+# module call so they don't re-fetch internally.
+module "ctx" {
+  source = "git::https://github.com/chris-arsenault/ahara-tf-patterns.git//modules/platform-context"
+}
+
 locals {
   ru_ai_site_name             = "ru-ai"
   ru_ai_project_prefix        = "websites"
@@ -89,6 +95,10 @@ module "ru_ai_api" {
 
   prefix   = local.ru_ai_resource_prefix
   hostname = local.ru_ai_api_domain
+
+  vpc = module.ctx.vpc
+  alb = module.ctx.alb
+  # routes are unauthenticated → cognito input not required
 
   iam_policy = [data.aws_iam_policy_document.ru_ai_lambda.json]
 
